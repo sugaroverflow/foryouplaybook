@@ -37,6 +37,60 @@ app.get('/api/playbook/:scanId', (c) => {
   return c.json({ scan, findings, moves })
 })
 
+app.post('/api/share', async (c) => {
+  const body = (await c.req.json()) as { scanId: string; shareEnabled: boolean }
+  const scan = db.prepare('SELECT user_id FROM scans WHERE id = ?').get(body.scanId) as
+    | { user_id: string }
+    | undefined
+  if (!scan) return c.json({ error: 'not found' }, 404)
+  const user = db.prepare('SELECT username FROM users WHERE id = ?').get(scan.user_id) as {
+    username: string
+  }
+  db.prepare('UPDATE users SET share_enabled = ?, public_slug = ? WHERE id = ?').run(
+    body.shareEnabled ? 1 : 0,
+    user.username,
+    scan.user_id
+  )
+  return c.json({ publicUrl: `${config.frontendUrl}/?p=${user.username}` })
+})
+
+app.get('/api/public/:slug', (c) => {
+  const slug = c.req.param('slug')
+  const user = db
+    .prepare('SELECT * FROM users WHERE public_slug = ? AND share_enabled = 1')
+    .get(slug) as { id: string; display_name: string; username: string } | undefined
+  if (!user) return c.json({ error: 'not found' }, 404)
+  const scan = db
+    .prepare(
+      `SELECT id, archetype, archetype_description, archetype_confidence, post_count, fit_json
+       FROM scans
+       WHERE user_id = ?
+       ORDER BY started_at DESC
+       LIMIT 1`
+    )
+    .get(user.id) as {
+      id: string
+      archetype: string
+      archetype_description: string
+      archetype_confidence: string
+      post_count: number
+      fit_json: string | null
+    }
+  if (!scan) return c.json({ error: 'no scan' }, 404)
+  const rule = db
+    .prepare('SELECT headline FROM findings WHERE scan_id = ? ORDER BY RANDOM() LIMIT 1')
+    .get(scan.id) as { headline: string } | undefined
+  return c.json({
+    displayName: user.display_name,
+    username: user.username,
+    archetype: scan.archetype,
+    archetypeDescription: scan.archetype_description,
+    postCount: scan.post_count,
+    fit: scan.fit_json ? JSON.parse(scan.fit_json) : {},
+    rule: rule?.headline,
+  })
+})
+
 serve({
   fetch: app.fetch,
   port: config.port,

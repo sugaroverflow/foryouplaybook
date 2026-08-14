@@ -7,6 +7,7 @@ import { Weights } from './sections/Weights'
 import { WeightLab } from './sections/WeightLab'
 import { DemoFeed, ActionEffects } from './sections/DemoFeed'
 import { PlaybookCTA } from './sections/PlaybookCTA'
+import { PublicPlaybook } from './PublicPlaybook'
 import { ScanStatus } from './ScanStatus'
 
 const NAV = [
@@ -557,6 +558,29 @@ export default function App() {
   const { scrollYProgress } = useScroll()
   const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 30 })
   const scanId = useMemo(() => new URLSearchParams(window.location.search).get('scan'), [])
+  const publicSlug = useMemo(() => new URLSearchParams(window.location.search).get('p'), [])
+
+  if (publicSlug) {
+    return (
+      <>
+        <motion.div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: 'var(--ink)',
+            mixBlendMode: 'difference',
+            transformOrigin: '0 50%',
+            scaleX,
+            zIndex: 100,
+          }}
+        />
+        <PublicPlaybook slug={publicSlug} />
+      </>
+    )
+  }
 
   if (scanId) {
     return (

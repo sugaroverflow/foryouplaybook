@@ -130,6 +130,58 @@ export function Playbook({ scanId }: { scanId: string }) {
           )}
         </div>
       ))}
+
+      <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
+    </div>
+  )
+}
+
+function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function share() {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanId, shareEnabled: true }),
+      })
+      const j = await res.json()
+      setShareUrl(j.publicUrl)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 64 }}>
+      {!shareUrl ? (
+        <button className="boxlink" onClick={share} disabled={loading}>
+          {loading ? 'Sharing...' : 'Share my archetype'}
+        </button>
+      ) : (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <a
+            className="boxlink"
+            href={`https://x.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`apparently my X archetype is ${archetype}`)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Share to X
+          </a>
+          <button
+            className="boxlink"
+            onClick={() => {
+              navigator.clipboard.writeText(shareUrl)
+              alert('Link copied')
+            }}
+          >
+            Copy link
+          </button>
+        </div>
+      )}
     </div>
   )
 }
