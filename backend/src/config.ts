@@ -21,4 +21,5 @@ export const config = {
   xaiModel: process.env.XAI_MODEL || 'grok-3-latest',
   tokenEncryptionKey: requireEnv('TOKEN_ENCRYPTION_KEY'),
   currentRegimeStart: process.env.CURRENT_REGIME_START || '2026-07-31T00:00:00.000Z',
+  maxPosts: Number(process.env.MAX_POSTS) || 200,
 }

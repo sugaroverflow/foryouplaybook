@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { db } from './db.js'
 import { runAnalysis } from './analysis.js'
+import { config } from './config.js'
 import { fetchTimeline } from './xapi.js'
 
 export interface StartScanInput {
@@ -75,8 +76,9 @@ export function startScan(input: StartScanInput) {
       }
 
       setStage(input.scanId, 'fetching_posts')
-      const posts = await fetchTimeline(user.x_user_id, input.accessToken)
+      const posts = await fetchTimeline(user.x_user_id, input.accessToken, config.maxPosts)
       await persistPosts(input.scanId, input.userId, posts)
+      db.prepare('UPDATE scans SET cost_estimate = ? WHERE id = ?').run(posts.length * 0.005, input.scanId)
 
       setStage(input.scanId, 'extracting_patterns')
       setStage(input.scanId, 'building_moves')

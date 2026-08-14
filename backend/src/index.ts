@@ -54,6 +54,27 @@ app.post('/api/share', async (c) => {
   return c.json({ publicUrl: `${config.frontendUrl}/?p=${user.username}` })
 })
 
+app.post('/api/settings/delete', async (c) => {
+  const body = (await c.req.json()) as { scanId: string; confirm: boolean }
+  if (!body.scanId || !body.confirm) return c.json({ error: 'bad request' }, 400)
+  const scan = db.prepare('SELECT user_id FROM scans WHERE id = ?').get(body.scanId) as
+    | { user_id: string }
+    | undefined
+  if (!scan) return c.json({ error: 'not found' }, 404)
+
+  db.prepare('DELETE FROM findings WHERE scan_id IN (SELECT id FROM scans WHERE user_id = ?)').run(scan.user_id)
+  db.prepare('DELETE FROM moves WHERE scan_id IN (SELECT id FROM scans WHERE user_id = ?)').run(scan.user_id)
+  db.prepare('DELETE FROM metric_snapshots WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)').run(scan.user_id)
+  db.prepare('DELETE FROM post_features WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)').run(scan.user_id)
+  db.prepare('DELETE FROM posts WHERE user_id = ?').run(scan.user_id)
+  db.prepare('DELETE FROM scans WHERE user_id = ?').run(scan.user_id)
+  db.prepare('DELETE FROM playbook_rules WHERE user_id = ?').run(scan.user_id)
+  db.prepare('DELETE FROM experiments WHERE user_id = ?').run(scan.user_id)
+  db.prepare('DELETE FROM users WHERE id = ?').run(scan.user_id)
+
+  return c.json({ ok: true })
+})
+
 app.get('/api/public/:slug', (c) => {
   const slug = c.req.param('slug')
   const user = db

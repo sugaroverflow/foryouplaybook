@@ -15,11 +15,14 @@ export interface FetchedPost {
   attachments?: { media_keys?: string[] }
 }
 
-export async function fetchTimeline(xUserId: string, accessToken: string): Promise<FetchedPost[]> {
+export async function fetchTimeline(
+  xUserId: string,
+  accessToken: string,
+  maxPosts: number = 400
+): Promise<FetchedPost[]> {
   const tweets: FetchedPost[] = []
   let nextToken: string | null = null
   let count = 0
-  const maxPages = 4 // soft cap at ~400 posts
 
   const baseParams = new URLSearchParams({
     start_time: new Date(config.currentRegimeStart).toISOString().replace(/\.\d+Z$/, 'Z'),
@@ -63,7 +66,7 @@ export async function fetchTimeline(xUserId: string, accessToken: string): Promi
     }
 
     nextToken = json.meta?.next_token || null
-  } while (nextToken && count < 400)
+  } while (nextToken && count < maxPosts)
 
   return tweets
 }

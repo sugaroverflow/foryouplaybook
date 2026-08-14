@@ -7,8 +7,10 @@ import { Weights } from './sections/Weights'
 import { WeightLab } from './sections/WeightLab'
 import { DemoFeed, ActionEffects } from './sections/DemoFeed'
 import { PlaybookCTA } from './sections/PlaybookCTA'
+import { Privacy } from './Privacy'
 import { PublicPlaybook } from './PublicPlaybook'
 import { ScanStatus } from './ScanStatus'
+import { Terms } from './Terms'
 
 const NAV = [
   ['Scoring', '#scoring'],
@@ -528,6 +530,8 @@ function Footer() {
             <a href="https://deepwiki.com/xai-org/x-algorithm/" target="_blank" rel="noreferrer">
               DeepWiki ↗
             </a>
+            <a href="/?page=privacy">Privacy</a>
+            <a href="/?page=terms">Terms</a>
             <a
               href="https://devin.ai"
               target="_blank"
@@ -559,6 +563,25 @@ export default function App() {
   const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 30 })
   const scanId = useMemo(() => new URLSearchParams(window.location.search).get('scan'), [])
   const publicSlug = useMemo(() => new URLSearchParams(window.location.search).get('p'), [])
+  const page = useMemo(() => new URLSearchParams(window.location.search).get('page'), [])
+
+  if (page === 'privacy') {
+    return (
+      <>
+        <Nav />
+        <Privacy />
+      </>
+    )
+  }
+
+  if (page === 'terms') {
+    return (
+      <>
+        <Nav />
+        <Terms />
+      </>
+    )
+  }
 
   if (publicSlug) {
     return (

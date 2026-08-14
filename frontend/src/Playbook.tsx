@@ -132,6 +132,46 @@ export function Playbook({ scanId }: { scanId: string }) {
       ))}
 
       <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
+      <DeleteSection scanId={data.scan.id} />
+    </div>
+  )
+}
+
+function DeleteSection({ scanId }: { scanId: string }) {
+  const [loading, setLoading] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+
+  async function deleteData() {
+    if (!window.confirm('Delete your Playbook and all stored X data? This cannot be undone.')) return
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/settings/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanId, confirm: true }),
+      })
+      if (res.ok) setDeleted(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (deleted) {
+    return (
+      <div style={{ marginTop: 64 }}>
+        <p className="lede">All data deleted.</p>
+        <a className="boxlink" style={{ marginTop: 16, display: 'inline-block' }} href="/">
+          Back to home
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: 64 }}>
+      <button className="boxlink" onClick={deleteData} disabled={loading}>
+        {loading ? 'Deleting...' : 'Delete my data'}
+      </button>
     </div>
   )
 }
