@@ -85,7 +85,7 @@ auth.get('/callback', async (c) => {
   }
 
   const meRes = await fetch(
-    'https://api.x.com/2/users/me?user.fields=public_metrics,profile_image_url,username,display_name,id',
+    'https://api.x.com/2/users/me?user.fields=public_metrics,profile_image_url',
     { headers: { Authorization: `Bearer ${tokens.access_token}` } }
   )
 
