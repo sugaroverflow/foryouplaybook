@@ -27,7 +27,7 @@ export async function fetchTimeline(
   const baseParams = new URLSearchParams({
     start_time: new Date(config.currentRegimeStart).toISOString().replace(/\.\d+Z$/, 'Z'),
     max_results: '100',
-    'tweet.fields': 'created_at,public_metrics,non_public_metrics,referenced_tweets,conversation_id,entities,lang,note_tweet',
+    'tweet.fields': 'created_at,public_metrics,referenced_tweets,conversation_id,entities,lang,note_tweet',
     expansions: 'attachments.media_keys',
     'media.fields': 'type,url,alt_text',
   })
