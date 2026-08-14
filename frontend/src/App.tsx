@@ -24,7 +24,7 @@ function Nav() {
     <div className="nav-bar">
       <div className="nav-inner">
         <a href="#top" className="mono nav-brand">
-          insidetheforyou
+          foryouplaybook
         </a>
         <div className="nav-spacer" />
         {NAV.map(([label, href]) => (
@@ -521,11 +521,11 @@ function Footer() {
           }}
         >
           <span className="mono" style={{ fontSize: 12, letterSpacing: '0.14em' }}>
-            INSIDETHEFORYOU
+            FORYOUPLAYBOOK
           </span>
           <div style={{ display: 'flex', gap: 24, alignItems: 'center' }} className="small mono">
             <a href="https://github.com/dabit3/insidetheforyou" target="_blank" rel="noreferrer">
-              Source code ↗
+              Inspired by Inside the For You ↗
             </a>
             <a href="https://deepwiki.com/xai-org/x-algorithm/" target="_blank" rel="noreferrer">
               DeepWiki ↗
