@@ -6,3 +6,4 @@ data
 .DS_Store
 *.sqlite
 *.sqlite-journal
+.railway
