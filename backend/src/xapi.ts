@@ -12,6 +12,7 @@ export interface FetchedPost {
   entities?: unknown
   lang?: string
   note_tweet?: { text: string }
+  attachments?: { media_keys?: string[] }
 }
 
 export async function fetchTimeline(xUserId: string, accessToken: string): Promise<FetchedPost[]> {

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { db } from './db.js'
+import { runAnalysis } from './analysis.js'
 import { fetchTimeline } from './xapi.js'
 
 export interface StartScanInput {
@@ -18,15 +19,11 @@ function setStage(scanId: string, stage: string, status: string = 'running') {
   )
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 async function persistPosts(scanId: string, userId: string, posts: Awaited<ReturnType<typeof fetchTimeline>>) {
   const now = new Date().toISOString()
   const insertPost = db.prepare(
-    `INSERT OR IGNORE INTO posts (id, user_id, x_post_id, text, post_type, created_at, has_url, conversation_id, fetched_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT OR IGNORE INTO posts (id, user_id, x_post_id, text, post_type, created_at, has_url, media_type, conversation_id, fetched_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
   const insertMetrics = db.prepare(
     `INSERT OR IGNORE INTO metric_snapshots (id, post_id, captured_at, impressions, likes, replies, reposts, quotes, bookmarks, engagements, profile_clicks, url_clicks)
@@ -44,6 +41,7 @@ async function persistPosts(scanId: string, userId: string, posts: Awaited<Retur
       p._type,
       p.created_at,
       text.includes('http') ? 1 : 0,
+      p.attachments?.media_keys?.length ? 'media' : 'none',
       p.conversation_id || null,
       now
     )
@@ -80,24 +78,11 @@ export function startScan(input: StartScanInput) {
       const posts = await fetchTimeline(user.x_user_id, input.accessToken)
       await persistPosts(input.scanId, input.userId, posts)
 
-      setStage(input.scanId, 'normalizing_metrics')
-      await delay(500)
-
       setStage(input.scanId, 'extracting_patterns')
-      // TODO: LLM content feature extraction
-      await delay(500)
-
-      setStage(input.scanId, 'testing_hypotheses')
-      // TODO: detect winners/underperformers/contrasts
-      await delay(500)
-
       setStage(input.scanId, 'building_moves')
-      // TODO: generate five moves
-      await delay(500)
 
       setStage(input.scanId, 'rendering_playbook')
-      // TODO: persist findings, archetype, moves
-      await delay(500)
+      await runAnalysis(input.scanId, input.userId)
 
       setStage(input.scanId, 'completed', 'completed')
     } catch (err) {

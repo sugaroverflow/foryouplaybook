@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { API_URL } from './api'
+import { Playbook } from './Playbook'
 
 type Scan = {
   id: string
@@ -62,15 +63,7 @@ export function ScanStatus() {
       <p className="lede" style={{ marginTop: 16 }}>
         {STAGE_COPY[scan.stage] || scan.stage} — {scan.post_count} posts read
       </p>
-      {scan.status === 'completed' && (
-        <a
-          className="boxlink"
-          style={{ marginTop: 32, display: 'inline-block' }}
-          href={`${API_URL}/api/playbook/${scan.id}`}
-        >
-          View raw Playbook JSON
-        </a>
-      )}
+      {scan.status === 'completed' && <Playbook scanId={scan.id} />}
     </div>
   )
 }
