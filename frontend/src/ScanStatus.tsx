@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { API_URL } from './api'
+import { Reveal, Section } from './components/Reveal'
 import { Playbook } from './Playbook'
 
 type Scan = {
@@ -11,12 +12,10 @@ type Scan = {
 }
 
 const STAGE_COPY: Record<string, string> = {
-  fetching_posts: '🔎 reading the receipts',
-  normalizing_metrics: '📐 making likes stop bossing everyone around',
-  extracting_patterns: "🧠 figuring out what you won't shut up about",
-  testing_hypotheses: '👀 found something weird',
-  building_moves: '🎮 picking your next five moves',
-  rendering_playbook: '📖 writing your playbook',
+  fetching_posts: 'Reading the receipts',
+  extracting_patterns: 'Figuring out what you keep coming back to',
+  building_moves: 'Picking your next five moves',
+  rendering_playbook: 'Writing your playbook',
   completed: 'Done!',
 }
 
@@ -52,18 +51,84 @@ export function ScanStatus() {
     }
   }, [])
 
-  if (error) return <p>{error}</p>
-  if (!scan) return <p>Loading your Playbook...</p>
+  if (error) {
+    return (
+      <Section theme="light" eyebrow="Something went wrong">
+        <Reveal>
+          <p className="lede">{error}</p>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <a className="boxlink" style={{ marginTop: 32 }} href="/">
+            Back to home
+          </a>
+        </Reveal>
+      </Section>
+    )
+  }
+
+  if (!scan) {
+    return (
+      <Section theme="dark" eyebrow="Cooking your Playbook">
+        <Reveal>
+          <h1 className="display">Loading...</h1>
+        </Reveal>
+      </Section>
+    )
+  }
+
+  if (scan.status === 'completed') {
+    return <Playbook scanId={scan.id} />
+  }
+
+  const stageLabel = STAGE_COPY[scan.stage] || scan.stage
 
   return (
-    <div style={{ padding: '20vh 24px', maxWidth: 720, margin: '0 auto' }}>
-      <h1 className="display" style={{ fontSize: 'clamp(32px, 5vw, 56px)' }}>
-        Cooking your Playbook 🍳
-      </h1>
-      <p className="lede" style={{ marginTop: 16 }}>
-        {STAGE_COPY[scan.stage] || scan.stage} — {scan.post_count} posts read
-      </p>
-      {scan.status === 'completed' && <Playbook scanId={scan.id} />}
-    </div>
+    <Section id="top" theme="dark" eyebrow="Cooking your Playbook 🍳">
+      <Reveal>
+        <h1 className="display">
+          Reading your posts. <span className="dim">Finding your patterns.</span>
+        </h1>
+      </Reveal>
+      <Reveal delay={0.1}>
+        <p className="lede" style={{ marginTop: 24 }}>
+          We pull from your current For You regime, normalize your metrics, and build five moves for
+          what to try next.
+        </p>
+      </Reveal>
+      <Reveal delay={0.2}>
+        <div className="cellgrid cols-3" style={{ marginTop: 56 }}>
+          <div className={`cell ${scan.status === 'failed' ? 'filled' : ''}`}>
+            <span className="tag">Current step</span>
+            <div className="cell-title">{scan.status === 'failed' ? 'Scan failed' : stageLabel}</div>
+            <p className="small" style={{ marginTop: 12 }}>
+              {scan.post_count} posts read
+            </p>
+          </div>
+          <div className="cell">
+            <span className="tag">Posts</span>
+            <div className="cell-title">{scan.post_count}</div>
+            <p className="small" style={{ marginTop: 12 }}>
+              found so far
+            </p>
+          </div>
+          <div className="cell">
+            <span className="tag">Status</span>
+            <div className="cell-title">{scan.status}</div>
+            <p className="small" style={{ marginTop: 12 }}>
+              {scan.status === 'failed'
+                ? 'Please refresh or start over'
+                : 'This usually takes 10–30 seconds'}
+            </p>
+          </div>
+        </div>
+      </Reveal>
+      {scan.status === 'failed' && (
+        <Reveal delay={0.3}>
+          <a className="boxlink" style={{ marginTop: 48 }} href="/">
+            Try again
+          </a>
+        </Reveal>
+      )}
+    </Section>
   )
 }

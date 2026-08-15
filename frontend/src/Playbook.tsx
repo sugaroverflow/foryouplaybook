@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { API_URL } from './api'
+import { Reveal, Section } from './components/Reveal'
 
 type PlaybookData = {
   scan: {
@@ -25,28 +26,6 @@ type PlaybookData = {
   }>
 }
 
-function FitItem({ dim, val }: { dim: string; val: { grade: string; confidence: string } }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: 12,
-        padding: '12px 0',
-        borderBottom: '1px solid var(--line)',
-      }}
-    >
-      <span className="mono" style={{ textTransform: 'capitalize' }}>
-        {dim}
-      </span>
-      <span className="mono">
-        {val.grade}{' '}
-        <span style={{ opacity: 0.5 }}>({val.confidence})</span>
-      </span>
-    </div>
-  )
-}
-
 export function Playbook({ scanId }: { scanId: string }) {
   const [data, setData] = useState<PlaybookData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -58,82 +37,191 @@ export function Playbook({ scanId }: { scanId: string }) {
       .catch(() => setError('Could not load playbook.'))
   }, [scanId])
 
-  if (error) return <p>{error}</p>
-  if (!data) return <p>Loading your Playbook...</p>
+  if (error) {
+    return (
+      <Section theme="light" eyebrow="Error">
+        <Reveal>
+          <p className="lede">{error}</p>
+        </Reveal>
+      </Section>
+    )
+  }
+
+  if (!data) {
+    return (
+      <Section theme="dark" eyebrow="ForYou Playbook">
+        <Reveal>
+          <h1 className="display">Loading your Playbook...</h1>
+        </Reveal>
+      </Section>
+    )
+  }
 
   const fit = data.scan.fit_json ? JSON.parse(data.scan.fit_json) : {}
 
   return (
-    <div style={{ padding: '10vh 24px', maxWidth: 760, margin: '0 auto' }}>
-      <h1 className="display" style={{ fontSize: 'clamp(32px, 5vw, 56px)' }}>
-        {data.scan.archetype}
-      </h1>
-      <p className="lede" style={{ marginTop: 16 }}>
-        {data.scan.archetype_description}
-      </p>
-      <p className="small" style={{ marginTop: 8 }}>
-        {data.scan.post_count} posts studied · confidence: {data.scan.archetype_confidence}
-      </p>
-
-      <h2 className="display" style={{ marginTop: 64, fontSize: 'clamp(24px, 4vw, 40px)' }}>
-        ForYou Fit
-      </h2>
-      {Object.entries(fit).map(([dim, val]) => (
-        <FitItem key={dim} dim={dim} val={val as { grade: string; confidence: string }} />
-      ))}
-
-      <h2 className="display" style={{ marginTop: 64, fontSize: 'clamp(24px, 4vw, 40px)' }}>
-        Discoveries
-      </h2>
-      {data.findings.map((f) => (
-        <div key={f.id} style={{ marginTop: 24 }}>
-          <h3 className="cell-title">{f.headline}</h3>
-          <p className="small" style={{ marginTop: 8, whiteSpace: 'pre-line' }}>
-            {f.explanation}
+    <>
+      <Section id="top" theme="dark" eyebrow="Your archetype">
+        <Reveal>
+          <h1 className="display">{data.scan.archetype}</h1>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <p className="lede" style={{ marginTop: 24 }}>
+            {data.scan.archetype_description}
           </p>
-          <p className="small" style={{ marginTop: 8, opacity: 0.6 }}>
-            Confidence: {f.confidence}
+        </Reveal>
+        <Reveal delay={0.2}>
+          <p className="small" style={{ marginTop: 16 }}>
+            {data.scan.post_count} posts studied · confidence: {data.scan.archetype_confidence}
           </p>
-        </div>
-      ))}
+        </Reveal>
+      </Section>
 
-      <h2 className="display" style={{ marginTop: 64, fontSize: 'clamp(24px, 4vw, 40px)' }}>
-        Your Five Moves
-      </h2>
-      {data.moves.map((m) => (
-        <div
-          key={m.id}
-          style={{ marginTop: 24, padding: 24, border: '1px solid var(--line)', borderRadius: 8 }}
+      <Section theme="light" eyebrow="ForYou Fit">
+        <Reveal>
+          <h2 className="display">
+            Your A–F profile across <span className="dim">five dimensions.</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="cellgrid cols-3" style={{ marginTop: 48 }}>
+            {Object.entries(fit).map(([dim, val]) => {
+              const v = val as { grade: string; confidence: string }
+              return (
+                <div className="cell" key={dim}>
+                  <span className="tag" style={{ textTransform: 'capitalize' }}>
+                    {dim}
+                  </span>
+                  <div className="cell-title">{v.grade}</div>
+                  <p className="small" style={{ marginTop: 8 }}>
+                    {v.confidence} confidence
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </Reveal>
+      </Section>
+
+      <Section theme="dark" eyebrow="Three discoveries">
+        <Reveal>
+          <h2 className="display">
+            What your data <span className="dim">keeps saying.</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="cellgrid" style={{ marginTop: 48 }}>
+            {data.findings.map((f) => (
+              <div className="cell" key={f.id}>
+                <span className="tag">Discovery</span>
+                <h3 className="cell-title">{f.headline}</h3>
+                <p className="small" style={{ marginTop: 12, whiteSpace: 'pre-line' }}>
+                  {f.explanation}
+                </p>
+                <p className="small" style={{ marginTop: 12, opacity: 0.6 }}>
+                  Confidence: {f.confidence}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </Section>
+
+      <Section theme="light" eyebrow="Your five moves">
+        <Reveal>
+          <h2 className="display">
+            What to try <span className="dim">next.</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="cellgrid" style={{ marginTop: 48 }}>
+            {data.moves.map((m) => (
+              <div className="cell" key={m.id}>
+                <span className="tag" style={{ textTransform: 'uppercase' }}>
+                  {m.move_type}
+                </span>
+                <h3 className="cell-title">{m.title}</h3>
+                <p className="small" style={{ marginTop: 12, whiteSpace: 'pre-line' }}>
+                  {m.body}
+                </p>
+                {m.rewrite_text && (
+                  <div className="cell filled" style={{ marginTop: 24 }}>
+                    <span className="tag">Try this rewrite</span>
+                    <p className="small" style={{ marginTop: 8, whiteSpace: 'pre-line' }}>
+                      {m.rewrite_text}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </Section>
+
+      <Section theme="dark" eyebrow="Share or delete">
+        <Reveal>
+          <h2 className="display">
+            Keep it. <span className="dim">Or wipe it.</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div style={{ marginTop: 40, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
+            <DeleteSection scanId={data.scan.id} />
+          </div>
+        </Reveal>
+      </Section>
+    </>
+  )
+}
+
+function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function share() {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanId, shareEnabled: true }),
+      })
+      const j = await res.json()
+      setShareUrl(j.publicUrl)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (shareUrl) {
+    return (
+      <>
+        <a
+          className="boxlink"
+          href={`https://x.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`apparently my X archetype is ${archetype}`)}`}
+          target="_blank"
+          rel="noreferrer"
         >
-          <span className="tag" style={{ textTransform: 'uppercase' }}>
-            {m.move_type}
-          </span>
-          <h3 className="cell-title" style={{ marginTop: 8 }}>
-            {m.title}
-          </h3>
-          <p className="small" style={{ marginTop: 8, whiteSpace: 'pre-line' }}>
-            {m.body}
-          </p>
-          {m.rewrite_text && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: 16,
-                background: 'rgba(0,0,0,0.05)',
-                borderRadius: 4,
-              }}
-            >
-              <p className="small" style={{ margin: 0 }}>
-                {m.rewrite_text}
-              </p>
-            </div>
-          )}
-        </div>
-      ))}
+          Share to X
+        </a>
+        <button
+          className="boxlink"
+          onClick={() => {
+            navigator.clipboard.writeText(shareUrl)
+            alert('Link copied')
+          }}
+        >
+          Copy link
+        </button>
+      </>
+    )
+  }
 
-      <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
-      <DeleteSection scanId={data.scan.id} />
-    </div>
+  return (
+    <button className="boxlink" onClick={share} disabled={loading}>
+      {loading ? 'Sharing...' : 'Share my archetype'}
+    </button>
   )
 }
 
@@ -158,70 +246,15 @@ function DeleteSection({ scanId }: { scanId: string }) {
 
   if (deleted) {
     return (
-      <div style={{ marginTop: 64 }}>
-        <p className="lede">All data deleted.</p>
-        <a className="boxlink" style={{ marginTop: 16, display: 'inline-block' }} href="/">
-          Back to home
-        </a>
-      </div>
+      <a className="boxlink" href="/">
+        Back to home
+      </a>
     )
   }
 
   return (
-    <div style={{ marginTop: 64 }}>
-      <button className="boxlink" onClick={deleteData} disabled={loading}>
-        {loading ? 'Deleting...' : 'Delete my data'}
-      </button>
-    </div>
-  )
-}
-
-function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
-  const [shareUrl, setShareUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  async function share() {
-    setLoading(true)
-    try {
-      const res = await fetch(`${API_URL}/api/share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId, shareEnabled: true }),
-      })
-      const j = await res.json()
-      setShareUrl(j.publicUrl)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div style={{ marginTop: 64 }}>
-      {!shareUrl ? (
-        <button className="boxlink" onClick={share} disabled={loading}>
-          {loading ? 'Sharing...' : 'Share my archetype'}
-        </button>
-      ) : (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <a
-            className="boxlink"
-            href={`https://x.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`apparently my X archetype is ${archetype}`)}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Share to X
-          </a>
-          <button
-            className="boxlink"
-            onClick={() => {
-              navigator.clipboard.writeText(shareUrl)
-              alert('Link copied')
-            }}
-          >
-            Copy link
-          </button>
-        </div>
-      )}
-    </div>
+    <button className="boxlink" onClick={deleteData} disabled={loading}>
+      {loading ? 'Deleting...' : 'Delete my data'}
+    </button>
   )
 }
