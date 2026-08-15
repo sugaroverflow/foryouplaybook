@@ -76,14 +76,36 @@ export function ScanStatus() {
     )
   }
 
-  if (scan.status === 'completed') {
-    return <Playbook scanId={scan.id} />
-  }
-
   const stageLabel = STAGE_COPY[scan.stage] || scan.stage
 
+  if (scan.status === 'completed') {
+    return (
+      <>
+        <Section theme="dark" eyebrow="Playbook ready 🍳">
+          <Reveal>
+            <h1 className="display">
+              Cooked <span className="dim">and plated.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p className="lede" style={{ marginTop: 24 }}>
+              We read {scan.post_count} posts from your current For You regime and built a personal
+              strategy. Scroll down to see your archetype, your Fit, and your five moves.
+            </p>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <a className="boxlink" style={{ marginTop: 48, display: 'inline-block' }} href="#top">
+              See my Playbook ↓
+            </a>
+          </Reveal>
+        </Section>
+        <Playbook scanId={scan.id} />
+      </>
+    )
+  }
+
   return (
-    <Section id="top" theme="dark" eyebrow="Cooking your Playbook 🍳">
+    <Section theme="dark" eyebrow="Cooking your Playbook 🍳">
       <Reveal>
         <h1 className="display">
           Reading your posts. <span className="dim">Finding your patterns.</span>

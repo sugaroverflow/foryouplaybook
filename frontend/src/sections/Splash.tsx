@@ -11,16 +11,14 @@ export function Splash() {
             The algorithm is global. The Playbook is yours.
           </span>
           <h1 className="display" style={{ marginTop: 12 }}>
-            See how For You works.{' '}
-            <span className="dim">Then see how it works for you.</span>
+            Discover your X.
           </h1>
           <p className="lede" style={{ marginTop: 24 }}>
             <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
               Inside the For You
             </a>{' '}
-            is Nader Dabit's interactive explainer of X's open-source ranking algorithm. ForYou
-            Playbook takes the next step: it reads your own posts and builds five moves tailored to
-            your patterns.
+            explains the global algorithm. ForYou Playbook reads your own posts and discovers the
+            patterns that are working for you — then builds five moves.
           </p>
 
           <div className="bar-track score-bar" style={{ marginTop: 32 }}>
