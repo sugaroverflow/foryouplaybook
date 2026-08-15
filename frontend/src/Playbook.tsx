@@ -1,6 +1,39 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
+
+const GRADE_COLOR: Record<string, string> = {
+  A: '#0f7b3e',
+  B: '#16a34a',
+  C: '#ca8a04',
+  D: '#ea580c',
+  F: '#c22a2a',
+}
+
+const GRADE_PERCENT: Record<string, string> = {
+  A: '100%',
+  B: '75%',
+  C: '50%',
+  D: '25%',
+  F: '5%',
+}
+
+const FIT_ICON: Record<string, string> = {
+  conversation: '💬',
+  travels: '🚀',
+  curiosity: '🔍',
+  reach: '📣',
+  momentum: '📈',
+}
+
+const MOVE_COLOR: Record<string, string> = {
+  rewrite: '#c22a2a',
+  double_down: '#0f7b3e',
+  change: '#c22a2a',
+  go_talk: '#0f7b3e',
+  experiment: '#0f7b3e',
+}
 
 type PlaybookData = {
   scan: {
@@ -24,6 +57,35 @@ type PlaybookData = {
     body: string
     rewrite_text: string | null
   }>
+}
+
+function FitCard({ dim, val }: { dim: string; val: { grade: string; confidence: string } }) {
+  const color = GRADE_COLOR[val.grade] || '#888'
+  return (
+    <div className="score-card" style={{ borderColor: color, boxShadow: `6px 6px 0 ${color}` }}>
+      <span
+        className="tag"
+        style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+      >
+        {FIT_ICON[dim]} {dim}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 8 }}>
+        <span className="display score-value" style={{ color }}>
+          {val.grade}
+        </span>
+        <span className="small">{val.confidence} confidence</span>
+      </div>
+      <div className="bar-track score-bar">
+        <motion.div
+          initial={{ width: 0 }}
+          whileInView={{ width: GRADE_PERCENT[val.grade] || '0%' }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          style={{ height: '100%', background: color }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export function Playbook({ scanId }: { scanId: string }) {
@@ -63,17 +125,20 @@ export function Playbook({ scanId }: { scanId: string }) {
     <>
       <Section id="top" theme="dark" eyebrow="Your archetype">
         <Reveal>
-          <h1 className="display">{data.scan.archetype}</h1>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="lede" style={{ marginTop: 24 }}>
-            {data.scan.archetype_description}
-          </p>
-        </Reveal>
-        <Reveal delay={0.2}>
-          <p className="small" style={{ marginTop: 16 }}>
-            {data.scan.post_count} posts studied · confidence: {data.scan.archetype_confidence}
-          </p>
+          <div className="score-card" style={{ color: 'var(--ink)' }}>
+            <span
+              className="tag"
+              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+            >
+              {data.scan.post_count} posts studied · {data.scan.archetype_confidence} confidence
+            </span>
+            <h1 className="display" style={{ marginTop: 12 }}>
+              {data.scan.archetype}
+            </h1>
+            <p className="lede" style={{ marginTop: 24, color: 'var(--muted-on-light)' }}>
+              {data.scan.archetype_description}
+            </p>
+          </div>
         </Reveal>
       </Section>
 
@@ -84,21 +149,10 @@ export function Playbook({ scanId }: { scanId: string }) {
           </h2>
         </Reveal>
         <Reveal delay={0.1}>
-          <div className="cellgrid cols-3" style={{ marginTop: 48 }}>
-            {Object.entries(fit).map(([dim, val]) => {
-              const v = val as { grade: string; confidence: string }
-              return (
-                <div className="cell" key={dim}>
-                  <span className="tag" style={{ textTransform: 'capitalize' }}>
-                    {dim}
-                  </span>
-                  <div className="cell-title">{v.grade}</div>
-                  <p className="small" style={{ marginTop: 8 }}>
-                    {v.confidence} confidence
-                  </p>
-                </div>
-              )
-            })}
+          <div className="cellgrid" style={{ marginTop: 48 }}>
+            {Object.entries(fit).map(([dim, val]) => (
+              <FitCard key={dim} dim={dim} val={val as { grade: string; confidence: string }} />
+            ))}
           </div>
         </Reveal>
       </Section>
@@ -113,7 +167,7 @@ export function Playbook({ scanId }: { scanId: string }) {
           <div className="cellgrid" style={{ marginTop: 48 }}>
             {data.findings.map((f) => (
               <div className="cell" key={f.id}>
-                <span className="tag">Discovery</span>
+                <span className="tag">💡 Discovery</span>
                 <h3 className="cell-title">{f.headline}</h3>
                 <p className="small" style={{ marginTop: 12, whiteSpace: 'pre-line' }}>
                   {f.explanation}
@@ -137,10 +191,23 @@ export function Playbook({ scanId }: { scanId: string }) {
           <div className="cellgrid" style={{ marginTop: 48 }}>
             {data.moves.map((m) => (
               <div className="cell" key={m.id}>
-                <span className="tag" style={{ textTransform: 'uppercase' }}>
+                <span
+                  className="tag"
+                  style={{
+                    color: MOVE_COLOR[m.move_type] || 'inherit',
+                    border: `1px solid ${MOVE_COLOR[m.move_type] || 'currentColor'}`,
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    display: 'inline-block',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {m.move_type}
                 </span>
-                <h3 className="cell-title">{m.title}</h3>
+                <h3 className="cell-title" style={{ marginTop: 12 }}>
+                  {m.title}
+                </h3>
                 <p className="small" style={{ marginTop: 12, whiteSpace: 'pre-line' }}>
                   {m.body}
                 </p>

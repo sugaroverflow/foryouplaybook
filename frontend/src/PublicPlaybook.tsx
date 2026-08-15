@@ -1,6 +1,31 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
+
+const GRADE_COLOR: Record<string, string> = {
+  A: '#0f7b3e',
+  B: '#16a34a',
+  C: '#ca8a04',
+  D: '#ea580c',
+  F: '#c22a2a',
+}
+
+const GRADE_PERCENT: Record<string, string> = {
+  A: '100%',
+  B: '75%',
+  C: '50%',
+  D: '25%',
+  F: '5%',
+}
+
+const FIT_ICON: Record<string, string> = {
+  conversation: '💬',
+  travels: '🚀',
+  curiosity: '🔍',
+  reach: '📣',
+  momentum: '📈',
+}
 
 type PublicData = {
   displayName: string
@@ -11,6 +36,35 @@ type PublicData = {
   postCount: number
   fit: Record<string, { grade: string; confidence: string }>
   rule: string
+}
+
+function FitCard({ dim, val }: { dim: string; val: { grade: string; confidence: string } }) {
+  const color = GRADE_COLOR[val.grade] || '#888'
+  return (
+    <div className="score-card" style={{ borderColor: color, boxShadow: `6px 6px 0 ${color}` }}>
+      <span
+        className="tag"
+        style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+      >
+        {FIT_ICON[dim]} {dim}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 8 }}>
+        <span className="display score-value" style={{ color }}>
+          {val.grade}
+        </span>
+        <span className="small">{val.confidence} confidence</span>
+      </div>
+      <div className="bar-track score-bar">
+        <motion.div
+          initial={{ width: 0 }}
+          whileInView={{ width: GRADE_PERCENT[val.grade] || '0%' }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          style={{ height: '100%', background: color }}
+        />
+      </div>
+    </div>
+  )
 }
 
 function tweetUrl(data: PublicData, publicUrl: string): string {
@@ -58,20 +112,21 @@ export function PublicPlaybook({ slug }: { slug: string }) {
     <>
       <Section id="top" theme="dark" eyebrow={data.username}>
         <Reveal>
-          <p className="eyebrow" style={{ marginBottom: 12 }}>
-            Apparently {data.displayName}'s X archetype is
-          </p>
-          <h1 className="display">{data.archetype}</h1>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="lede" style={{ marginTop: 24 }}>
-            {data.archetypeDescription}
-          </p>
-        </Reveal>
-        <Reveal delay={0.2}>
-          <p className="small" style={{ marginTop: 16 }}>
-            {data.postCount} posts studied · {data.archetypeConfidence} confidence
-          </p>
+          <div className="score-card" style={{ color: 'var(--ink)' }}>
+            <span
+              className="tag"
+              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+            >
+              {data.postCount} posts studied · {data.archetypeConfidence} confidence
+            </span>
+            <p className="eyebrow" style={{ marginBottom: 12, color: 'var(--muted-on-light)' }}>
+              Apparently {data.displayName}'s X archetype is
+            </p>
+            <h1 className="display">{data.archetype}</h1>
+            <p className="lede" style={{ marginTop: 24, color: 'var(--muted-on-light)' }}>
+              {data.archetypeDescription}
+            </p>
+          </div>
         </Reveal>
       </Section>
 
@@ -82,17 +137,10 @@ export function PublicPlaybook({ slug }: { slug: string }) {
           </h2>
         </Reveal>
         <Reveal delay={0.1}>
-          <div className="cellgrid cols-3" style={{ marginTop: 48 }}>
-            {Object.entries(data.fit)
-              .slice(0, 4)
-              .map(([dim, val]) => (
-                <div className="cell" key={dim}>
-                  <span className="tag" style={{ textTransform: 'capitalize' }}>
-                    {dim}
-                  </span>
-                  <div className="cell-title">{val.grade}</div>
-                </div>
-              ))}
+          <div className="cellgrid" style={{ marginTop: 48 }}>
+            {Object.entries(data.fit).map(([dim, val]) => (
+              <FitCard key={dim} dim={dim} val={val} />
+            ))}
           </div>
         </Reveal>
       </Section>
@@ -104,9 +152,14 @@ export function PublicPlaybook({ slug }: { slug: string }) {
           </h2>
         </Reveal>
         <Reveal delay={0.1}>
-          <div className="cell" style={{ marginTop: 48 }}>
-            <span className="tag">My weirdest rule</span>
-            <p className="lede" style={{ marginTop: 12 }}>
+          <div className="score-card" style={{ marginTop: 48, color: 'var(--ink)' }}>
+            <span
+              className="tag"
+              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+            >
+              My weirdest rule
+            </span>
+            <p className="lede" style={{ marginTop: 12, color: 'var(--muted-on-light)' }}>
               "{data.rule}"
             </p>
           </div>
