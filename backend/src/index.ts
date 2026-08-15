@@ -106,6 +106,7 @@ app.get('/api/public/:slug', (c) => {
     username: user.username,
     archetype: scan.archetype,
     archetypeDescription: scan.archetype_description,
+    archetypeConfidence: scan.archetype_confidence,
     postCount: scan.post_count,
     fit: scan.fit_json ? JSON.parse(scan.fit_json) : {},
     rule: rule?.headline,

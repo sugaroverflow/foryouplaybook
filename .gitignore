@@ -7,3 +7,4 @@ data
 *.sqlite
 *.sqlite-journal
 .railway
+.playwright-cli

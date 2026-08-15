@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Privacy } from './Privacy'
 import { PublicPlaybook } from './PublicPlaybook'
 import { ScanStatus } from './ScanStatus'
@@ -74,9 +74,22 @@ function Footer() {
 }
 
 export default function App() {
-  const scanId = useMemo(() => new URLSearchParams(window.location.search).get('scan'), [])
+  const [scanId, setScanId] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('scan')
+  )
   const publicSlug = useMemo(() => new URLSearchParams(window.location.search).get('p'), [])
   const page = useMemo(() => new URLSearchParams(window.location.search).get('page'), [])
+
+  useEffect(() => {
+    const onPop = () => setScanId(new URLSearchParams(window.location.search).get('scan'))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function handleScanStart(id: string) {
+    window.history.pushState(null, '', `/?scan=${encodeURIComponent(id)}`)
+    setScanId(id)
+  }
 
   if (page === 'privacy') {
     return (
@@ -109,7 +122,7 @@ export default function App() {
     return (
       <>
         <Nav />
-        <ScanStatus />
+        <ScanStatus scanId={scanId} />
       </>
     )
   }
@@ -117,7 +130,7 @@ export default function App() {
   return (
     <>
       <Nav />
-      <Splash />
+      <Splash onScanStart={handleScanStart} />
       <Footer />
     </>
   )

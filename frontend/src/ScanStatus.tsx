@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
 import { Playbook } from './Playbook'
@@ -11,25 +12,18 @@ type Scan = {
   qualifying_post_count: number
 }
 
-const STAGE_COPY: Record<string, string> = {
-  fetching_posts: 'Reading the receipts',
-  extracting_patterns: 'Figuring out what you keep coming back to',
-  building_moves: 'Picking your next five moves',
-  rendering_playbook: 'Writing your playbook',
-  completed: 'Done!',
-}
+const STAGES = [
+  { key: 'fetching_posts', label: 'Reading the receipts' },
+  { key: 'extracting_patterns', label: 'Figuring out what you keep coming back to' },
+  { key: 'building_moves', label: 'Picking your next five moves' },
+  { key: 'rendering_playbook', label: 'Writing your playbook' },
+]
 
-function getScanId(): string | null {
-  return new URLSearchParams(window.location.search).get('scan')
-}
-
-export function ScanStatus() {
+export function ScanStatus({ scanId }: { scanId: string }) {
   const [scan, setScan] = useState<Scan | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const scanId = getScanId()
-    if (!scanId) return
     let cancelled = false
     const poll = async () => {
       try {
@@ -49,18 +43,18 @@ export function ScanStatus() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [scanId])
 
   if (error) {
     return (
-      <Section theme="light" eyebrow="Something went wrong">
+      <Section theme="dark" eyebrow="Something went wrong">
         <Reveal>
-          <p className="lede">{error}</p>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <a className="boxlink" style={{ marginTop: 32 }} href="/">
-            Back to home
-          </a>
+          <div className="score-card playbook-card">
+            <p className="lede">{error}</p>
+            <a className="boxlink" style={{ marginTop: 32, display: 'inline-block' }} href="/">
+              Back to home
+            </a>
+          </div>
         </Reveal>
       </Section>
     )
@@ -68,89 +62,99 @@ export function ScanStatus() {
 
   if (!scan) {
     return (
-      <Section theme="dark" eyebrow="Cooking your Playbook">
+      <Section theme="dark" eyebrow="ForYou Playbook">
         <Reveal>
-          <h1 className="display">Loading...</h1>
+          <div className="score-card playbook-card">
+            <h1 className="display">Loading…</h1>
+          </div>
         </Reveal>
       </Section>
     )
   }
 
-  const stageLabel = STAGE_COPY[scan.stage] || scan.stage
-
   if (scan.status === 'completed') {
+    return <Playbook scanId={scan.id} />
+  }
+
+  if (scan.status === 'failed') {
     return (
-      <>
-        <Section theme="dark" eyebrow="Playbook ready 🍳">
-          <Reveal>
-            <h1 className="display">
-              Cooked <span className="dim">and plated.</span>
+      <Section theme="dark" eyebrow="Scan failed">
+        <Reveal>
+          <div
+            className="score-card playbook-card"
+            style={{ borderColor: '#c22a2a', boxShadow: '6px 6px 0 #c22a2a' }}
+          >
+            <span
+              className="tag"
+              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+            >
+              {scan.post_count} posts read before it stopped
+            </span>
+            <h1 className="display" style={{ marginTop: 12 }}>
+              That one didn't land.
             </h1>
-          </Reveal>
-          <Reveal delay={0.1}>
             <p className="lede" style={{ marginTop: 24 }}>
-              We read {scan.post_count} posts from your current For You regime and built a personal
-              strategy. Scroll down to see your archetype, your Fit, and your five moves.
+              X didn't give us enough to grade. Start over to run a fresh scan.
             </p>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <a className="boxlink" style={{ marginTop: 48, display: 'inline-block' }} href="#top">
-              See my Playbook ↓
+            <a className="boxlink" style={{ marginTop: 40, display: 'inline-block' }} href="/">
+              Start over
             </a>
-          </Reveal>
-        </Section>
-        <Playbook scanId={scan.id} />
-      </>
+          </div>
+        </Reveal>
+      </Section>
     )
   }
 
+  const stageIndex = Math.max(
+    0,
+    STAGES.findIndex((s) => s.key === scan.stage)
+  )
+  const progress = ((stageIndex + 0.5) / STAGES.length) * 100
+
   return (
-    <Section theme="dark" eyebrow="Cooking your Playbook 🍳">
+    <Section theme="dark" eyebrow="Cooking your scorecard 🍳">
       <Reveal>
-        <h1 className="display">
-          Reading your posts. <span className="dim">Finding your patterns.</span>
-        </h1>
-      </Reveal>
-      <Reveal delay={0.1}>
-        <p className="lede" style={{ marginTop: 24 }}>
-          We pull from your current For You regime, normalize your metrics, and build five moves for
-          what to try next.
-        </p>
-      </Reveal>
-      <Reveal delay={0.2}>
-        <div className="cellgrid cols-3" style={{ marginTop: 56 }}>
-          <div className={`cell ${scan.status === 'failed' ? 'filled' : ''}`}>
-            <span className="tag">Current step</span>
-            <div className="cell-title">{scan.status === 'failed' ? 'Scan failed' : stageLabel}</div>
-            <p className="small" style={{ marginTop: 12 }}>
-              {scan.post_count} posts read
-            </p>
+        <div className="score-card playbook-card">
+          <span
+            className="tag"
+            style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+          >
+            {scan.post_count} posts read so far · usually 10–30 seconds
+          </span>
+          <h1 className="display" style={{ marginTop: 12 }}>
+            Grading your posts.
+          </h1>
+          <p className="lede" style={{ marginTop: 24 }}>
+            We pull your posts from the current For You regime, normalize the metrics, and build
+            your five moves.
+          </p>
+
+          <div
+            className="bar-track score-bar"
+            style={{ marginTop: 32, background: 'rgba(0, 0, 0, 0.1)' }}
+          >
+            <motion.div
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              style={{ height: '100%', background: 'var(--ink)' }}
+            />
           </div>
-          <div className="cell">
-            <span className="tag">Posts</span>
-            <div className="cell-title">{scan.post_count}</div>
-            <p className="small" style={{ marginTop: 12 }}>
-              found so far
-            </p>
-          </div>
-          <div className="cell">
-            <span className="tag">Status</span>
-            <div className="cell-title">{scan.status}</div>
-            <p className="small" style={{ marginTop: 12 }}>
-              {scan.status === 'failed'
-                ? 'Please refresh or start over'
-                : 'This usually takes 10–30 seconds'}
-            </p>
+
+          <div style={{ marginTop: 24 }}>
+            {STAGES.map((s, i) => {
+              const state = i < stageIndex ? 'done' : i === stageIndex ? 'current' : 'pending'
+              return (
+                <div key={s.key} className={`stage-row ${state}`}>
+                  <span className="stage-mark">
+                    {state === 'done' ? '✓' : state === 'current' ? '●' : '○'}
+                  </span>
+                  <span>{s.label}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </Reveal>
-      {scan.status === 'failed' && (
-        <Reveal delay={0.3}>
-          <a className="boxlink" style={{ marginTop: 48 }} href="/">
-            Try again
-          </a>
-        </Reveal>
-      )}
     </Section>
   )
 }

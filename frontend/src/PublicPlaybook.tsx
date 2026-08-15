@@ -1,31 +1,7 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
-
-const GRADE_COLOR: Record<string, string> = {
-  A: '#0f7b3e',
-  B: '#16a34a',
-  C: '#ca8a04',
-  D: '#ea580c',
-  F: '#c22a2a',
-}
-
-const GRADE_PERCENT: Record<string, string> = {
-  A: '100%',
-  B: '75%',
-  C: '50%',
-  D: '25%',
-  F: '5%',
-}
-
-const FIT_ICON: Record<string, string> = {
-  conversation: '💬',
-  travels: '🚀',
-  curiosity: '🔍',
-  reach: '📣',
-  momentum: '📈',
-}
+import { GradeRail, GradeStamp, overallGrade, type FitValue } from './components/Grades'
 
 type PublicData = {
   displayName: string
@@ -34,37 +10,8 @@ type PublicData = {
   archetypeDescription: string
   archetypeConfidence: string
   postCount: number
-  fit: Record<string, { grade: string; confidence: string }>
+  fit: Record<string, FitValue>
   rule: string
-}
-
-function FitCard({ dim, val }: { dim: string; val: { grade: string; confidence: string } }) {
-  const color = GRADE_COLOR[val.grade] || '#888'
-  return (
-    <div className="score-card" style={{ borderColor: color, boxShadow: `6px 6px 0 ${color}` }}>
-      <span
-        className="tag"
-        style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
-      >
-        {FIT_ICON[dim]} {dim}
-      </span>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 8 }}>
-        <span className="display score-value" style={{ color }}>
-          {val.grade}
-        </span>
-        <span className="small">{val.confidence} confidence</span>
-      </div>
-      <div className="bar-track score-bar">
-        <motion.div
-          initial={{ width: 0 }}
-          whileInView={{ width: GRADE_PERCENT[val.grade] || '0%' }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          style={{ height: '100%', background: color }}
-        />
-      </div>
-    </div>
-  )
 }
 
 function tweetUrl(data: PublicData, publicUrl: string): string {
@@ -88,9 +35,11 @@ export function PublicPlaybook({ slug }: { slug: string }) {
 
   if (error) {
     return (
-      <Section theme="light" eyebrow="Not found">
+      <Section theme="dark" eyebrow="Not found">
         <Reveal>
-          <p className="lede">{error}</p>
+          <div className="score-card playbook-card">
+            <p className="lede">{error}</p>
+          </div>
         </Reveal>
       </Section>
     )
@@ -100,86 +49,55 @@ export function PublicPlaybook({ slug }: { slug: string }) {
     return (
       <Section theme="dark" eyebrow="ForYou Playbook">
         <Reveal>
-          <h1 className="display">Loading public Playbook...</h1>
+          <div className="score-card playbook-card">
+            <h1 className="display">Loading scorecard…</h1>
+          </div>
         </Reveal>
       </Section>
     )
   }
 
   const publicUrl = `${window.location.origin}/?p=${slug}`
+  const overall = overallGrade(data.fit)
 
   return (
-    <>
-      <Section id="top" theme="dark" eyebrow={data.username}>
-        <Reveal>
-          <div className="score-card" style={{ color: 'var(--ink)' }}>
+    <Section id="top" theme="dark" eyebrow={`@${data.username}`}>
+      <Reveal>
+        <div className="score-card playbook-card">
+          {overall && <GradeStamp grade={overall} />}
+
+          <div className="card-head">
             <span
               className="tag"
               style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
             >
               {data.postCount} posts studied · {data.archetypeConfidence} confidence
             </span>
-            <p className="eyebrow" style={{ marginBottom: 12, color: 'var(--muted-on-light)' }}>
+            <p className="eyebrow" style={{ margin: '16px 0 8px' }}>
               Apparently {data.displayName}'s X archetype is
             </p>
             <h1 className="display">{data.archetype}</h1>
-            <p className="lede" style={{ marginTop: 24, color: 'var(--muted-on-light)' }}>
+            <p className="lede" style={{ marginTop: 20 }}>
               {data.archetypeDescription}
             </p>
           </div>
-        </Reveal>
-      </Section>
 
-      <Section theme="light" eyebrow="ForYou Fit">
-        <Reveal>
-          <h2 className="display">
-            A snapshot of <span className="dim">what's working.</span>
-          </h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <div className="cellgrid" style={{ marginTop: 48 }}>
-            {Object.entries(data.fit).map(([dim, val]) => (
-              <FitCard key={dim} dim={dim} val={val} />
-            ))}
-          </div>
-        </Reveal>
-      </Section>
+          <hr className="card-rule" />
 
-      <Section theme="dark" eyebrow="Playbook rule">
-        <Reveal>
-          <h2 className="display">
-            A rule worth <span className="dim">stealing.</span>
-          </h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <div className="score-card" style={{ marginTop: 48, color: 'var(--ink)' }}>
-            <span
-              className="tag"
-              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
-            >
-              My weirdest rule
-            </span>
-            <p className="lede" style={{ marginTop: 12, color: 'var(--muted-on-light)' }}>
+          <GradeRail fit={data.fit} />
+
+          <hr className="card-rule" />
+
+          <div className="rewrite-note">
+            <span className="tag">My weirdest rule</span>
+            <p className="small" style={{ marginTop: 8, color: 'var(--muted-on-dark)' }}>
               "{data.rule}"
             </p>
           </div>
-        </Reveal>
-      </Section>
 
-      <Section theme="light" eyebrow="Build yours">
-        <Reveal>
-          <h2 className="display">
-            Get your own <span className="dim">archetype.</span>
-          </h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="lede" style={{ marginTop: 24 }}>
-            ForYou Playbook reads your own X posts and finds the patterns that are uniquely working
-            for you.
-          </p>
-        </Reveal>
-        <Reveal delay={0.2}>
-          <div style={{ marginTop: 40, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <hr className="card-rule" />
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <a className="boxlink" href={tweetUrl(data, publicUrl)} target="_blank" rel="noreferrer">
               Share to X
             </a>
@@ -193,11 +111,15 @@ export function PublicPlaybook({ slug }: { slug: string }) {
               Copy link
             </button>
             <a className="boxlink" href="/">
-              Build yours
+              Generate my scorecard
             </a>
           </div>
-        </Reveal>
-      </Section>
-    </>
+          <p className="small" style={{ marginTop: 16, opacity: 0.6 }}>
+            ForYou Playbook grades your own X posts under the current For You regime. Inspired by
+            Nader Dabit's Inside the For You.
+          </p>
+        </div>
+      </Reveal>
+    </Section>
   )
 }

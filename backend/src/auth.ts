@@ -23,6 +23,35 @@ function sha256Base64url(s: string): string {
   return base64url(createHash('sha256').update(s).digest())
 }
 
+// The callback runs inside the auth popup. When an opener exists we hand the
+// result back via postMessage and close; otherwise (popup blocked, full-page
+// fallback) we redirect like before.
+function popupClosePage(payload: { scanId?: string; error?: string }, fallbackUrl: string): string {
+  const escape = (s: string) => s.replace(/</g, '\\u003c')
+  const message = escape(JSON.stringify({ type: 'foryouplaybook:auth', ...payload }))
+  const targetOrigin = JSON.stringify(new URL(config.frontendUrl).origin)
+  const fallback = escape(JSON.stringify(fallbackUrl))
+  return `<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><title>ForYou Playbook</title></head>
+  <body style="font-family: ui-monospace, monospace; background: #f4f4f2; color: #050505; padding: 32px;">
+    <p>Finishing up… you can close this window.</p>
+    <p><a href="${fallbackUrl}">Continue to ForYou Playbook</a></p>
+    <script>
+      (function () {
+        var payload = ${message};
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(payload, ${targetOrigin});
+          window.close();
+        } else {
+          window.location.replace(${fallback});
+        }
+      })();
+    </script>
+  </body>
+</html>`
+}
+
 auth.get('/start', (c) => {
   const codeVerifier = randomId(32)
   const state = randomId(16)
@@ -48,12 +77,25 @@ auth.get('/start', (c) => {
 auth.get('/callback', async (c) => {
   const code = c.req.query('code')
   const state = c.req.query('state')
-  if (!code || !state) return c.text('missing code or state', 400)
+  if (!code || !state) {
+    return c.html(
+      popupClosePage(
+        { error: 'X authorization was cancelled or incomplete. Try again.' },
+        config.frontendUrl
+      ),
+      400
+    )
+  }
 
   const row = db.prepare('SELECT code_verifier FROM oauth_states WHERE state = ?').get(state) as
     | { code_verifier: string }
     | undefined
-  if (!row) return c.text('invalid or expired state', 400)
+  if (!row) {
+    return c.html(
+      popupClosePage({ error: 'That sign-in attempt expired. Try again.' }, config.frontendUrl),
+      400
+    )
+  }
   db.prepare('DELETE FROM oauth_states WHERE state = ?').run(state)
 
   const basic = Buffer.from(`${config.xClientId}:${config.xClientSecret}`).toString('base64')
@@ -74,7 +116,10 @@ auth.get('/callback', async (c) => {
   if (!tokenRes.ok) {
     const err = await tokenRes.text()
     console.error('X token exchange failed', tokenRes.status, err)
-    return c.text(`X token exchange failed: ${tokenRes.status}`, 502)
+    return c.html(
+      popupClosePage({ error: 'X sign-in could not be completed. Try again.' }, config.frontendUrl),
+      502
+    )
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -92,7 +137,10 @@ auth.get('/callback', async (c) => {
   if (!meRes.ok) {
     const err = await meRes.text()
     console.error('X users/me failed', meRes.status, err)
-    return c.text(`X users/me failed: ${meRes.status}`, 502)
+    return c.html(
+      popupClosePage({ error: 'X would not share your profile. Try again.' }, config.frontendUrl),
+      502
+    )
   }
 
   const me = (await meRes.json()) as {
@@ -137,7 +185,7 @@ auth.get('/callback', async (c) => {
   // Run the scan in the background; the frontend will poll for status.
   startScan({ scanId, userId: user.id, accessToken: tokens.access_token })
 
-  return c.redirect(`${config.frontendUrl}/?scan=${scanId}`)
+  return c.html(popupClosePage({ scanId }, `${config.frontendUrl}/?scan=${scanId}`))
 })
 
 export { auth }
