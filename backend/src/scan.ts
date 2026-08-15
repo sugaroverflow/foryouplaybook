@@ -32,7 +32,7 @@ async function persistPosts(scanId: string, userId: string, posts: Awaited<Retur
   )
 
   for (const p of posts) {
-    const postDbId = randomUUID()
+    const postDbId = p.id
     const text = p.note_tweet?.text || p.text || ''
     insertPost.run(
       postDbId,
