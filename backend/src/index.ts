@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { config } from './config.js'
 import { db } from './db.js'
 import { auth } from './auth.js'
+import { scanBudget } from './budget.js'
 
 const app = new Hono()
 
@@ -20,6 +21,8 @@ app.use(
 app.route('/api/auth/x', auth)
 
 app.get('/health', (c) => c.text('ok'))
+
+app.get('/api/scan-budget', (c) => c.json(scanBudget()))
 
 app.get('/api/scans/:id', (c) => {
   const id = c.req.param('id')

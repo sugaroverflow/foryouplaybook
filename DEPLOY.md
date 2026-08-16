@@ -54,7 +54,8 @@ If the scan fails, check the backend logs for xAI or X API errors.
    - `XAI_MODEL` — `grok-3-latest` (or current xAI model)
    - `TOKEN_ENCRYPTION_KEY` — 64-char hex
    - `CURRENT_REGIME_START` — `2026-07-31T00:00:00.000Z`
-   - `MAX_POSTS` — `200`
+   - `MAX_POSTS` — `100` (posts read per scan)
+   - `MONTHLY_SCAN_BUDGET` — `100` (scans per calendar month; size to your X tier's monthly post-read quota ÷ MAX_POSTS)
 4. Nixpacks will run `npm run build` then `npm start`.
 5. Wait for the `/health` check to return `ok`.
 

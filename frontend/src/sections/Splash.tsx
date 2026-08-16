@@ -5,10 +5,20 @@ import { Reveal, Section } from '../components/Reveal'
 
 type AuthState = { status: 'idle' } | { status: 'waiting' } | { status: 'error'; message: string }
 
+type ScanBudget = { total: number; remaining: number }
+
 export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void }) {
   const [auth, setAuth] = useState<AuthState>({ status: 'idle' })
+  const [budget, setBudget] = useState<ScanBudget | null>(null)
   const popupRef = useRef<Window | null>(null)
   const settledRef = useRef(false)
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/scan-budget`)
+      .then((r) => r.json())
+      .then((b) => setBudget(b))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const apiOrigin = new URL(API_URL, window.location.origin).origin
@@ -58,6 +68,7 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
   }
 
   const waiting = auth.status === 'waiting'
+  const soldOut = budget !== null && budget.remaining <= 0
 
   return (
     <Section id="top" theme="dark" eyebrow="ForYou Playbook">
@@ -114,9 +125,13 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
             className="boxlink"
             style={{ marginTop: 40, display: 'inline-block' }}
             onClick={startAuth}
-            disabled={waiting}
+            disabled={waiting || soldOut}
           >
-            {waiting ? 'Waiting for X authorization…' : 'Generate my scorecard →'}
+            {soldOut
+              ? 'Out of scans this month'
+              : waiting
+                ? 'Waiting for X authorization…'
+                : 'Generate my scorecard →'}
           </button>
           {auth.status === 'error' && (
             <p className="small" style={{ marginTop: 12, color: '#c22a2a' }}>
@@ -128,7 +143,9 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
             control. <a href="/?page=privacy">Privacy</a> · <a href="/?page=terms">Terms</a>
           </p>
           <p className="small mono" style={{ marginTop: 10, fontSize: 12 }}>
-            Limited scans per month — this runs on our X API budget, not yours.
+            {budget
+              ? `${budget.remaining}/${budget.total} scans remaining this month — this runs on our X API budget, not yours. One scan per person per month.`
+              : 'Limited scans per month — this runs on our X API budget, not yours.'}
           </p>
         </div>
       </Reveal>

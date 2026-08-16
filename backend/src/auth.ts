@@ -3,6 +3,7 @@ import { randomBytes, createHash } from 'node:crypto'
 import { config } from './config.js'
 import { db } from './db.js'
 import { encrypt } from './crypto.js'
+import { monthStartIso, scanBudget } from './budget.js'
 import { startScan } from './scan.js'
 
 const auth = new Hono()
@@ -177,6 +178,31 @@ auth.get('/callback', async (c) => {
   )
 
   const user = db.prepare('SELECT id FROM users WHERE x_user_id = ?').get(u.id) as { id: string }
+
+  // One scan per user per month: re-scans re-read the same posts against the
+  // same X quota, so hand back the existing scan instead of running a new one.
+  const existing = db
+    .prepare(
+      `SELECT id FROM scans
+       WHERE user_id = ? AND started_at >= ? AND status IN ('running', 'completed')
+       ORDER BY started_at DESC
+       LIMIT 1`
+    )
+    .get(user.id, monthStartIso()) as { id: string } | undefined
+  if (existing) {
+    return c.html(popupClosePage({ scanId: existing.id }, `${config.frontendUrl}/?scan=${existing.id}`))
+  }
+
+  if (scanBudget().remaining <= 0) {
+    return c.html(
+      popupClosePage(
+        { error: "This month's scan budget is used up. Come back after it resets." },
+        config.frontendUrl
+      ),
+      429
+    )
+  }
+
   const scanId = randomId(16)
   db.prepare(
     'INSERT INTO scans (id, user_id, status, stage, started_at) VALUES (?, ?, ?, ?, ?)'
