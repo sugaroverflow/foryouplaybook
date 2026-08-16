@@ -318,12 +318,12 @@ export function Playbook({ scanId }: { scanId: string }) {
             {tab === 'playground' && (
               <>
                 <p className="panel-note">
-                  Scoring lab from{' '}
+                  Scoring playground pulled from{' '}
                   <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
-                    Nader Dabit's Inside the For You
-                  </a>
-                  , pulled verbatim — pointed at your top 5 posts. Toggle actions and watch the
-                  score move.
+                    Nader's Inside the For You
+                  </a>{' '}
+                  — pointed at your top 5 posts. You can toggle the actions and watch the score
+                  move.
                 </p>
                 <PostPlayground posts={data.posts} />
               </>
