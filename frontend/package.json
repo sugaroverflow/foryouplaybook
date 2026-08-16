@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "fetch:tweets": "node scripts/fetch-tweets.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "framer-motion": "^13.1.0",
