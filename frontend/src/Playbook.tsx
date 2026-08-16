@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
+import { CardAvatar } from './components/Avatar'
 import { GradeRail, GradeStamp, overallGrade, type FitValue } from './components/Grades'
 import { EvidenceTweet, type Author, type EvidencePost } from './components/EvidenceTweet'
 
@@ -133,17 +134,25 @@ export function Playbook({ scanId }: { scanId: string }) {
           {overall && <GradeStamp grade={overall} />}
 
           <div className="card-head">
-            <span
-              className="tag"
-              style={{
-                fontSize: 11,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: 'var(--muted-on-light)',
-              }}
-            >
-              {data.scan.post_count} posts studied · {data.scan.archetype_confidence} confidence
-            </span>
+            <div className="card-identity">
+              {data.author && <CardAvatar author={data.author} />}
+              <div>
+                {data.author && <span className="card-handle">@{data.author.username}</span>}
+                <span
+                  className="tag"
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: 'var(--muted-on-light)',
+                    display: 'block',
+                    marginTop: 2,
+                  }}
+                >
+                  {data.scan.post_count} posts studied · {data.scan.archetype_confidence} confidence
+                </span>
+              </div>
+            </div>
             <h1 className="display" style={{ marginTop: 12 }}>
               {data.scan.archetype}
             </h1>
@@ -236,7 +245,8 @@ export function Playbook({ scanId }: { scanId: string }) {
               <DeleteSection scanId={data.scan.id} />
             </div>
             <p className="stub-meta">
-              Issued {issuedDate} · {data.scan.post_count} posts · ForYouPlaybook
+              Issued {data.author ? `to @${data.author.username} ` : ''}
+              {issuedDate} · {data.scan.post_count} posts · ForYouPlaybook
             </p>
             <p className="small" style={{ marginTop: 8 }}>
               Inspired by Nader Dabit's Inside the For You. Delete wipes your posts and tokens for

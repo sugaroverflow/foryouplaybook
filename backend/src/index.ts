@@ -150,7 +150,9 @@ app.get('/api/public/:slug', (c) => {
   const slug = c.req.param('slug')
   const user = db
     .prepare('SELECT * FROM users WHERE public_slug = ? AND share_enabled = 1')
-    .get(slug) as { id: string; display_name: string; username: string } | undefined
+    .get(slug) as
+    | { id: string; display_name: string; username: string; profile_image_url: string | null }
+    | undefined
   if (!user) return c.json({ error: 'not found' }, 404)
   const scan = db
     .prepare(
@@ -175,6 +177,7 @@ app.get('/api/public/:slug', (c) => {
   return c.json({
     displayName: user.display_name,
     username: user.username,
+    profileImageUrl: user.profile_image_url,
     archetype: scan.archetype,
     archetypeDescription: scan.archetype_description,
     archetypeConfidence: scan.archetype_confidence,

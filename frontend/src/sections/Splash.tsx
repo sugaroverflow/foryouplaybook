@@ -127,6 +127,9 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
             X sign-in opens in a popup — this page stays put. Read-only access. Your data, your
             control. <a href="/?page=privacy">Privacy</a> · <a href="/?page=terms">Terms</a>
           </p>
+          <p className="small mono" style={{ marginTop: 10, fontSize: 12 }}>
+            Limited scans per month — this runs on our X API budget, not yours.
+          </p>
         </div>
       </Reveal>
     </Section>

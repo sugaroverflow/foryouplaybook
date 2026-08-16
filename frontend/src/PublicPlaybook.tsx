@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
+import { CardAvatar } from './components/Avatar'
 import { GradeRail, GradeStamp, overallGrade, type FitValue } from './components/Grades'
 
 type PublicData = {
   displayName: string
   username: string
+  profileImageUrl: string | null
   archetype: string
   archetypeDescription: string
   archetypeConfidence: string
@@ -67,18 +69,32 @@ export function PublicPlaybook({ slug }: { slug: string }) {
           {overall && <GradeStamp grade={overall} />}
 
           <div className="card-head">
-            <span
-              className="tag"
-              style={{
-                fontSize: 11,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: 'var(--muted-on-light)',
-              }}
-            >
-              {data.postCount} posts studied · {data.archetypeConfidence} confidence
-            </span>
-            <p className="eyebrow" style={{ margin: '16px 0 8px' }}>
+            <div className="card-identity">
+              <CardAvatar
+                author={{
+                  username: data.username,
+                  displayName: data.displayName,
+                  profileImageUrl: data.profileImageUrl,
+                }}
+              />
+              <div>
+                <span className="card-handle">@{data.username}</span>
+                <span
+                  className="tag"
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: 'var(--muted-on-light)',
+                    display: 'block',
+                    marginTop: 2,
+                  }}
+                >
+                  {data.postCount} posts studied · {data.archetypeConfidence} confidence
+                </span>
+              </div>
+            </div>
+            <p className="eyebrow" style={{ margin: '0 0 8px' }}>
               Apparently {data.displayName}'s X archetype is
             </p>
             <h1 className="display">{data.archetype}</h1>

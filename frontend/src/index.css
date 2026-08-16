@@ -1380,6 +1380,39 @@ a {
   margin: 28px 0;
 }
 
+/* The report card belongs to someone: their X avatar, framed in ink */
+.card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1d9bf0;
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.card-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.card-handle {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 /* Overall grade, stamped like a mark on a report card (rotation applied by motion) */
 .grade-stamp {
   position: absolute;
