@@ -331,10 +331,10 @@ export function Playbook({ scanId }: { scanId: string }) {
 
           <div className="card-stub">
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <DownloadImageButton cardRef={cardRef} archetype={data.scan.archetype} />
               <ShareSection
                 scanId={data.scan.id}
                 archetype={data.scan.archetype}
-                cardRef={cardRef}
               />
               <DeleteSection scanId={data.scan.id} />
             </div>
@@ -517,14 +517,44 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
+function DownloadImageButton({
+  cardRef,
+  archetype,
+}: {
+  cardRef: React.RefObject<HTMLDivElement | null>
+  archetype: string
+}) {
+  const [loading, setLoading] = useState(false)
+
+  async function download() {
+    if (!cardRef.current) return
+    setLoading(true)
+    try {
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
+      const link = document.createElement('a')
+      link.download = `foryouplaybook-${archetype.replace(/\s+/g, '-').toLowerCase()}.png`
+      link.href = dataUrl
+      link.click()
+    } catch {
+      alert('Could not generate scorecard image.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button className="boxlink" onClick={download} disabled={loading}>
+      {loading ? 'Creating image…' : 'Download scorecard image'}
+    </button>
+  )
+}
+
 function ShareSection({
   scanId,
   archetype,
-  cardRef,
 }: {
   scanId: string
   archetype: string
-  cardRef: React.RefObject<HTMLDivElement | null>
 }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -541,19 +571,6 @@ function ShareSection({
       setShareUrl(j.publicUrl)
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function downloadImage() {
-    if (!cardRef.current) return
-    try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
-      const link = document.createElement('a')
-      link.download = `foryouplaybook-${archetype.replace(/\s+/g, '-').toLowerCase()}.png`
-      link.href = dataUrl
-      link.click()
-    } catch {
-      alert('Could not generate scorecard image.')
     }
   }
 
@@ -576,9 +593,6 @@ function ShareSection({
           }}
         >
           Copy link
-        </button>
-        <button className="boxlink" onClick={downloadImage}>
-          Download scorecard image
         </button>
       </>
     )
