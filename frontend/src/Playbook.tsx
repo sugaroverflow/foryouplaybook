@@ -348,18 +348,23 @@ export function Playbook({ scanId }: { scanId: string }) {
   )
 }
 
-type SimAction = { id: string; label: string; weight: number; metric: keyof Post | null }
+type SimAction = {
+  id: string
+  label: string
+  weight: number
+  metric: keyof Post | null
+  metricScale?: number
+}
 
 const SIM_ACTIONS: SimAction[] = [
   { id: 'fav', label: 'Like', weight: 0.5, metric: 'likes' },
   { id: 'reply', label: 'Reply', weight: 5.0, metric: 'replies' },
   { id: 'repost', label: 'Repost', weight: 1.0, metric: 'reposts' },
   { id: 'quote', label: 'Quote', weight: 5.0, metric: 'quotes' },
-  { id: 'share', label: 'Share', weight: 2.0, metric: null },
-  { id: 'share_dm', label: 'Share via DM', weight: 5.0, metric: null },
-  { id: 'copy_link', label: 'Copy the link', weight: 20.0, metric: null },
-  { id: 'follow', label: 'Follow the author', weight: 4.0, metric: null },
-  { id: 'click', label: 'Open the post', weight: 0.4, metric: null },
+  { id: 'share', label: 'Share', weight: 2.0, metric: 'bookmarks' },
+  { id: 'copy_link', label: 'Copy the link', weight: 20.0, metric: 'url_clicks' },
+  { id: 'follow', label: 'Follow the author', weight: 4.0, metric: 'profile_clicks' },
+  { id: 'click', label: 'Open the post', weight: 0.4, metric: 'impressions', metricScale: 0.0001 },
   { id: 'video', label: 'Watch the video', weight: 0.05, metric: null },
   { id: 'not_interested', label: '"Not interested"', weight: -43.2, metric: null },
   { id: 'block', label: 'Block the author', weight: -31.2, metric: null },
@@ -370,7 +375,9 @@ const SIM_ACTIONS: SimAction[] = [
 function computeScore(post: Post, weights: Record<string, number>): number {
   return SIM_ACTIONS.reduce((sum, a) => {
     if (!a.metric) return sum
-    return sum + (post[a.metric] as number || 0) * (weights[a.id] ?? a.weight)
+    const scale = a.metricScale ?? 1
+    const raw = (post[a.metric] as number | null) ?? 0
+    return sum + raw * scale * (weights[a.id] ?? a.weight)
   }, 0)
 }
 
