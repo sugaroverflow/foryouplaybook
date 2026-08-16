@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { toPng } from 'html-to-image'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
 import { CardAvatar } from './components/Avatar'
@@ -141,6 +142,7 @@ export function Playbook({ scanId }: { scanId: string }) {
   const [data, setData] = useState<PlaybookData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('review')
+  const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch(`${API_URL}/api/playbook/${scanId}`)
@@ -189,7 +191,7 @@ export function Playbook({ scanId }: { scanId: string }) {
   return (
     <Section id="top" theme="dark" eyebrow="Your ForYou scorecard">
       <Reveal>
-        <div className="score-card playbook-card">
+        <div className="score-card playbook-card" ref={cardRef}>
           <div className="card-head-grid">
             <div className="card-left">
               {overall && <GradeStamp grade={overall} />}
@@ -332,7 +334,11 @@ export function Playbook({ scanId }: { scanId: string }) {
 
           <div className="card-stub">
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
+              <ShareSection
+                scanId={data.scan.id}
+                archetype={data.scan.archetype}
+                cardRef={cardRef}
+              />
               <DeleteSection scanId={data.scan.id} />
             </div>
             <p className="stub-meta">
@@ -568,7 +574,15 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
-function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
+function ShareSection({
+  scanId,
+  archetype,
+  cardRef,
+}: {
+  scanId: string
+  archetype: string
+  cardRef: React.RefObject<HTMLDivElement | null>
+}) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -584,6 +598,19 @@ function ShareSection({ scanId, archetype }: { scanId: string; archetype: string
       setShareUrl(j.publicUrl)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function downloadImage() {
+    if (!cardRef.current) return
+    try {
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
+      const link = document.createElement('a')
+      link.download = `foryouplaybook-${archetype.replace(/\s+/g, '-').toLowerCase()}.png`
+      link.href = dataUrl
+      link.click()
+    } catch {
+      alert('Could not generate scorecard image.')
     }
   }
 
@@ -606,6 +633,9 @@ function ShareSection({ scanId, archetype }: { scanId: string; archetype: string
           }}
         >
           Copy link
+        </button>
+        <button className="boxlink" onClick={downloadImage}>
+          Download scorecard image
         </button>
       </>
     )
