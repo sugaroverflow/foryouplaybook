@@ -317,12 +317,8 @@ export function Playbook({ scanId }: { scanId: string }) {
             {tab === 'playground' && (
               <>
                 <p className="panel-note">
-                  Scoring playground pulled from{' '}
-                  <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
-                    Nader's Inside the For You
-                  </a>{' '}
-                  — pointed at your top 5 posts. You can toggle the actions and watch the score
-                  move.
+                  Drag the knobs to re-rank your top 5 posts. No predicted probabilities here — just
+                  your real counts multiplied by the weights.
                 </p>
                 <PostPlayground posts={data.posts} author={data.author} />
               </>
@@ -371,82 +367,101 @@ const SIM_ACTIONS: SimAction[] = [
   { id: 'report', label: 'Report', weight: -234.0, metric: null },
 ]
 
-function computeScore(post: Post, enabled: Set<string>): number {
+function computeScore(post: Post, weights: Record<string, number>): number {
   return SIM_ACTIONS.reduce((sum, a) => {
-    if (!enabled.has(a.id) || !a.metric) return sum
-    return sum + (post[a.metric] as number || 0) * a.weight
+    if (!a.metric) return sum
+    return sum + (post[a.metric] as number || 0) * (weights[a.id] ?? a.weight)
   }, 0)
 }
 
+const KNOBS = SIM_ACTIONS.filter((a) => a.metric)
+const DEFAULT_WEIGHTS = Object.fromEntries(SIM_ACTIONS.map((a) => [a.id, a.weight]))
+
 function PostPlayground({ posts, author }: { posts: Post[]; author: Author | null }) {
-  const [enabled, setEnabled] = useState<Set<string>>(
-    () => new Set(SIM_ACTIONS.filter((a) => a.metric).map((a) => a.id))
-  )
+  const [weights, setWeights] = useState<Record<string, number>>(() => DEFAULT_WEIGHTS)
 
   const rankedPosts = useMemo(() => {
     const withScore = posts.map((p) => ({
       ...p,
       text: p.text || '(no text)',
-      score: computeScore(p, enabled),
+      score: computeScore(p, weights),
     }))
     withScore.sort((a, b) => b.score - a.score)
     return withScore.slice(0, 5)
-  }, [posts, enabled])
-
-  function toggle(id: string) {
-    setEnabled((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function preset(mode: 'max' | 'negative' | 'reset') {
-    if (mode === 'reset') return setEnabled(new Set())
-    setEnabled(
-      new Set(SIM_ACTIONS.filter((a) => (mode === 'max' ? a.weight > 0 : a.weight < 0)).map((a) => a.id))
-    )
-  }
+  }, [posts, weights])
 
   return (
-    <>
-      <div className="aura-row" style={{ marginBottom: 16 }}>
-        <button className="aura-btn good" onClick={() => preset('max')}>
-          Max aura
-        </button>
-        <button className="aura-btn bad" onClick={() => preset('negative')}>
-          Negative aura
-        </button>
-        <button className="aura-btn neutral" onClick={() => preset('reset')}>
-          Reset
-        </button>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gap: 48,
+        alignItems: 'start',
+      }}
+    >
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <span
+            className="tag"
+            style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+          >
+            The knobs
+          </span>
+          <button className="aura-btn neutral" onClick={() => setWeights({ ...DEFAULT_WEIGHTS })}>
+            Factory settings
+          </button>
+        </div>
+
+        {KNOBS.map((a) => (
+          <div key={a.id} style={{ marginBottom: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span className="small" style={{ fontWeight: 500 }}>
+                {a.label}
+              </span>
+              <span className="small mono" style={{ opacity: 0.7 }}>
+                {weights[a.id] > 0 ? '+' : ''}
+                {Number(weights[a.id].toFixed(1))}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={-20}
+              max={20}
+              step={0.1}
+              value={weights[a.id]}
+              onChange={(e) =>
+                setWeights((prev) => ({ ...prev, [a.id]: Number(e.target.value) }))
+              }
+              style={{ width: '100%', accentColor: '#0f7b3e' }}
+            />
+          </div>
+        ))}
       </div>
 
-      <div className="pill-grid" style={{ marginBottom: 24 }}>
-        {SIM_ACTIONS.map((a) => {
-          const active = enabled.has(a.id)
-          return (
-            <button
-              key={a.id}
-              className={`pill-toggle ${active ? 'on' : ''} ${a.weight < 0 ? 'negative' : ''}`}
-              onClick={() => toggle(a.id)}
-            >
-              {a.label} <span style={{ opacity: 0.55 }}>{a.weight > 0 ? `+${a.weight}` : a.weight}</span>
-            </button>
-          )
-        })}
+      <div>
+        <span
+          className="tag"
+          style={{
+            fontSize: 11,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            opacity: 0.6,
+            display: 'block',
+            marginBottom: 20,
+          }}
+        >
+          Your feed, ranked
+        </span>
+        {rankedPosts.map((post, i) => (
+          <RankedPost
+            key={post.id}
+            post={post}
+            rank={i + 1}
+            author={author ?? { username: 'unknown', displayName: 'Unknown', profileImageUrl: null }}
+          />
+        ))}
       </div>
-
-      {rankedPosts.map((post, i) => (
-        <RankedPost
-          key={post.id}
-          post={post}
-          rank={i + 1}
-          author={author ?? { username: 'unknown', displayName: 'Unknown', profileImageUrl: null }}
-        />
-      ))}
-    </>
+    </div>
   )
 }
 
