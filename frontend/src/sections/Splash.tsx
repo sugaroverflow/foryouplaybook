@@ -121,10 +121,7 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
               {auth.message}
             </p>
           )}
-          <p className="small" style={{ marginTop: 16 }}>
-            X sign-in opens in a popup — this page stays put. Read-only access. Your data, your
-            control. <a href="/?page=privacy">Privacy</a> · <a href="/?page=terms">Terms</a>
-          </p>
+
           <p className="small mono" style={{ marginTop: 10, fontSize: 12 }}>
             {budget
               ? `${budget.remaining}/${budget.total} scans remaining this month — this runs on our own X budget, one scan per person.`
