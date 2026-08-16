@@ -145,7 +145,12 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
           <p className="small mono" style={{ marginTop: 10, fontSize: 12 }}>
             {budget
               ? `${budget.remaining}/${budget.total} scans remaining this month — this runs on our X API budget, not yours. One scan per person per month.`
-              : 'Limited scans per month — this runs on our X API budget, not yours.'}
+              : 'Limited scans per month — this runs on our X API budget, not yours.'}{' '}
+            Want to sponsor more scans? DM{' '}
+            <a href="https://twitter.com/sugaroverflow" target="_blank" rel="noreferrer">
+              @sugaroverflow
+            </a>
+            .
           </p>
         </div>
       </Reveal>
