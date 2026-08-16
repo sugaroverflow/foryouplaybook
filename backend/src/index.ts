@@ -87,6 +87,23 @@ app.get('/api/playbook/:scanId', (c) => {
   const moves = db
     .prepare('SELECT * FROM moves WHERE scan_id = ? ORDER BY move_type')
     .all(scanId) as Array<Record<string, unknown> & { evidence_json: string | null }>
+  const posts = db
+    .prepare(
+      `SELECT p.id, p.x_post_id, p.text, p.post_type, p.created_at,
+              ms.likes, ms.replies, ms.reposts, ms.quotes, ms.bookmarks,
+              ms.impressions, ms.engagements, ms.profile_clicks, ms.url_clicks
+       FROM posts p
+       LEFT JOIN (
+         SELECT post_id, MAX(captured_at) as max_captured
+         FROM metric_snapshots
+         GROUP BY post_id
+       ) latest ON latest.post_id = p.id
+       LEFT JOIN metric_snapshots ms ON ms.post_id = p.id AND ms.captured_at = latest.max_captured
+       WHERE p.user_id = ?
+       ORDER BY p.created_at DESC
+       LIMIT 100`
+    )
+    .all(scan.user_id) as Array<Record<string, unknown>>
   return c.json({
     scan,
     author: user
@@ -96,6 +113,7 @@ app.get('/api/playbook/:scanId', (c) => {
           profileImageUrl: user.profile_image_url,
         }
       : null,
+    posts,
     findings: findings.map((f) => ({
       ...f,
       headline: scrubPostIds(f.headline),

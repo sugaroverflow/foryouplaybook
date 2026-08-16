@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
@@ -40,6 +40,23 @@ type Move = {
   evidence_posts: EvidencePost[]
 }
 
+type Post = {
+  id: string
+  x_post_id: string
+  text: string
+  post_type: string
+  created_at: string
+  likes: number
+  replies: number
+  reposts: number
+  quotes: number
+  bookmarks: number
+  impressions: number | null
+  engagements: number | null
+  profile_clicks: number | null
+  url_clicks: number | null
+}
+
 type PlaybookData = {
   scan: {
     id: string
@@ -53,9 +70,51 @@ type PlaybookData = {
   author: Author | null
   findings: Finding[]
   moves: Move[]
+  posts: Post[]
 }
 
-type Tab = 'review' | 'actions'
+type Tab = 'review' | 'actions' | 'playground'
+
+const TONE_COLOR: Record<string, string> = { good: '#0c6434', bad: '#c22a2a' }
+const CONF_COLOR: Record<string, string> = {
+  high: '#0c6434',
+  medium: '#a16207',
+  low: '#c22a2a',
+}
+
+// Engagement multipliers from the open-source X heavy-ranker snapshot —
+// the same numbers Nader's weight bars visualize.
+const RULEBOOK_WEIGHTS = [
+  { label: 'You reply to a reply', value: 75 },
+  { label: 'Reply', value: 13.5 },
+  { label: 'Profile click', value: 12 },
+  { label: 'Repost', value: 1 },
+  { label: 'Like', value: 0.5 },
+  { label: 'Report', value: -369 },
+]
+
+function Rulebook() {
+  return (
+    <div className="rulebook">
+      <span className="tag">The rulebook · what one action is worth to the ranker</span>
+      {RULEBOOK_WEIGHTS.map((w) => (
+        <div className="rulebook-row" key={w.label}>
+          <span>{w.label}</span>
+          <div className="rulebook-bar">
+            <motion.div
+              initial={{ width: 0 }}
+              whileInView={{ width: `${Math.min(100, (Math.abs(w.value) / 75) * 100)}%` }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              style={{ height: '100%', background: w.value >= 0 ? '#3ecf70' : '#e5484d' }}
+            />
+          </div>
+          <span className="rulebook-value">{w.value}×</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function exhibitLabel(index: number, total: number): string {
   if (total <= 1) return 'Exhibit · from your posts'
@@ -131,34 +190,33 @@ export function Playbook({ scanId }: { scanId: string }) {
     <Section id="top" theme="dark" eyebrow="Your ForYou scorecard">
       <Reveal>
         <div className="score-card playbook-card">
-          {overall && <GradeStamp grade={overall} />}
-
-          <div className="card-head">
-            <div className="card-identity">
-              {data.author && <CardAvatar author={data.author} />}
-              <div>
-                {data.author && <span className="card-handle">@{data.author.username}</span>}
-                <span
-                  className="tag"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted-on-light)',
-                    display: 'block',
-                    marginTop: 2,
-                  }}
-                >
-                  {data.scan.post_count} posts studied · {data.scan.archetype_confidence} confidence
-                </span>
-              </div>
+          <div className="card-head-grid">
+            <div className="card-left">
+              {overall && <GradeStamp grade={overall} />}
+              {data.author && <CardAvatar author={data.author} size={96} />}
             </div>
-            <h1 className="display" style={{ marginTop: 12 }}>
-              {data.scan.archetype}
-            </h1>
-            <p className="lede" style={{ marginTop: 20 }}>
-              {data.scan.archetype_description}
-            </p>
+            <div className="card-right">
+              {data.author && <span className="card-handle">@{data.author.username}</span>}
+              <span
+                className="tag"
+                style={{
+                  fontSize: 11,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--muted-on-light)',
+                  display: 'block',
+                  marginTop: 2,
+                }}
+              >
+                {data.scan.post_count} posts studied · {data.scan.archetype_confidence} confidence
+              </span>
+              <h1 className="display" style={{ marginTop: 12 }}>
+                {data.scan.archetype}
+              </h1>
+              <p className="lede" style={{ marginTop: 16 }}>
+                {data.scan.archetype_description}
+              </p>
+            </div>
           </div>
 
           <hr className="card-rule" />
@@ -186,6 +244,15 @@ export function Playbook({ scanId }: { scanId: string }) {
               <span className="tab-kicker">What to try</span>
               <span>Actions · {data.moves.length}</span>
             </button>
+            <button
+              role="tab"
+              aria-selected={tab === 'playground'}
+              className={`playbook-tab ${tab === 'playground' ? 'on' : ''}`}
+              onClick={() => setTab('playground')}
+            >
+              <span className="tab-kicker">What if</span>
+              <span>Playground · 5</span>
+            </button>
           </div>
 
           <motion.div
@@ -199,28 +266,38 @@ export function Playbook({ scanId }: { scanId: string }) {
                 <p className="panel-note">
                   Patterns from your last {data.scan.post_count} posts, receipts included
                 </p>
-                {data.findings.map((f) => (
-                  <div className="playbook-row" key={f.id}>
+                <Rulebook />
+                {data.findings.map((f) => {
+                  const confColor = CONF_COLOR[f.confidence?.toLowerCase()] || 'var(--ink)'
+                  return (
                     <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'baseline',
-                        gap: 12,
-                        flexWrap: 'wrap',
-                      }}
+                      className="playbook-row"
+                      key={f.id}
+                      style={{ borderLeftColor: confColor }}
                     >
-                      <h3 className="cell-title" style={{ marginBottom: 0 }}>
-                        {f.headline}
-                      </h3>
-                      <span className="conf-tag">{f.confidence} confidence</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'baseline',
+                          gap: 12,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <h3 className="cell-title" style={{ marginBottom: 0 }}>
+                          {f.headline}
+                        </h3>
+                        <span className="conf-tag" style={{ color: confColor, borderColor: confColor }}>
+                          {f.confidence} confidence
+                        </span>
+                      </div>
+                      <p className="small" style={{ marginTop: 8, whiteSpace: 'pre-line' }}>
+                        {f.explanation}
+                      </p>
+                      <EvidenceList posts={f.evidence_posts} author={data.author} />
                     </div>
-                    <p className="small" style={{ marginTop: 8, whiteSpace: 'pre-line' }}>
-                      {f.explanation}
-                    </p>
-                    <EvidenceList posts={f.evidence_posts} author={data.author} />
-                  </div>
-                ))}
+                  )
+                })}
               </>
             )}
 
@@ -237,6 +314,16 @@ export function Playbook({ scanId }: { scanId: string }) {
                 ))}
               </>
             )}
+
+            {tab === 'playground' && (
+              <>
+                <p className="panel-note">
+                  Nader's weight lab, pointed at your top 5 posts. Toggle extra actions and watch
+                  the score move.
+                </p>
+                <PostPlayground posts={data.posts} />
+              </>
+            )}
           </motion.div>
 
           <div className="card-stub">
@@ -249,8 +336,7 @@ export function Playbook({ scanId }: { scanId: string }) {
               {issuedDate} · {data.scan.post_count} posts · ForYouPlaybook
             </p>
             <p className="small" style={{ marginTop: 8 }}>
-              Inspired by Nader Dabit's Inside the For You. Delete wipes your posts and tokens for
-              good.
+              Delete wipes your posts and tokens for good.
             </p>
           </div>
         </div>
@@ -259,10 +345,174 @@ export function Playbook({ scanId }: { scanId: string }) {
   )
 }
 
-function MoveRow({ move, author }: { move: Move; author: Author | null }) {
+const SIM_ACTIONS = [
+  { id: 'fav', label: 'Like', weight: 0.5, metric: 'likes' },
+  { id: 'reply', label: 'Reply', weight: 5.0, metric: 'replies' },
+  { id: 'repost', label: 'Repost', weight: 1.0, metric: 'reposts' },
+  { id: 'quote', label: 'Quote', weight: 5.0, metric: 'quotes' },
+  { id: 'not_interested', label: 'Not interested', weight: -43.2, metric: null },
+  { id: 'block', label: 'Block', weight: -31.2, metric: null },
+  { id: 'mute', label: 'Mute', weight: -58.8, metric: null },
+  { id: 'report', label: 'Report', weight: -234.0, metric: null },
+]
+
+function baseScore(post: Post): number {
   return (
-    <div className="playbook-row">
-      <span className={`sim-chip ${MOVE_TONE[move.move_type] || ''}`}>
+    (post.likes || 0) * 0.5 +
+    (post.replies || 0) * 5.0 +
+    (post.reposts || 0) * 1.0 +
+    (post.quotes || 0) * 5.0
+  )
+}
+
+const MAX_SCORE = 200
+
+function PostPlayground({ posts }: { posts: Post[] }) {
+  const topPosts = useMemo(
+    () =>
+      [...posts]
+        .sort((a, b) => baseScore(b) - baseScore(a))
+        .slice(0, 5)
+        .map((p) => ({ ...p, text: p.text || '(no text)' })),
+    [posts]
+  )
+
+  return (
+    <>
+      {topPosts.map((post) => (
+        <PostSim key={post.id} post={post} />
+      ))}
+    </>
+  )
+}
+
+function PostSim({ post }: { post: Post }) {
+  const [extra, setExtra] = useState<Set<string>>(new Set())
+
+  const extraScore = SIM_ACTIONS.reduce(
+    (sum, a) => (extra.has(a.id) ? sum + a.weight : sum),
+    0
+  )
+  const score = baseScore(post) + extraScore
+
+  function toggle(id: string) {
+    setExtra((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function preset(mode: 'max' | 'negative' | 'reset') {
+    if (mode === 'reset') return setExtra(new Set())
+    setExtra(
+      new Set(
+        SIM_ACTIONS.filter((a) =>
+          mode === 'max' ? a.weight > 0 : a.weight < 0
+        ).map((a) => a.id)
+      )
+    )
+  }
+
+  return (
+    <div className="playbook-row" style={{ borderLeftColor: score >= 0 ? '#0f7b3e' : '#c22a2a' }}>
+      <p className="small" style={{ opacity: 0.7, marginBottom: 8 }}>
+        {new Date(post.created_at).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })}
+      </p>
+      <p className="cell-title" style={{ marginBottom: 12, lineHeight: 1.4 }}>
+        {post.text}
+      </p>
+
+      <div className="score-card" style={{ padding: 20 }}>
+        <span className="tag" style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}>
+          Post score
+        </span>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 8 }}>
+          <motion.span
+            key={score}
+            initial={{ opacity: 0.4, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="display score-value"
+          >
+            {score > 0 ? '+' : ''}
+            {Number(score.toFixed(1))}
+          </motion.span>
+          <span className="small">
+            {score >= 20
+              ? 'competes for the top of the feed'
+              : score > 0
+                ? 'competes for a spot'
+                : score === 0
+                  ? 'invisible to the ranker'
+                  : 'buried'}
+          </span>
+        </div>
+        <div className="bar-track score-bar">
+          <motion.div
+            animate={{
+              width: `${Math.min(Math.abs(score) / MAX_SCORE, 1) * 100}%`,
+            }}
+            transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+            style={{
+              height: '100%',
+              backgroundColor: score >= 0 ? 'var(--ink)' : 'transparent',
+              backgroundImage:
+                score < 0
+                  ? 'repeating-linear-gradient(45deg, #c22a2a 0 6px, transparent 6px 12px)'
+                  : undefined,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="aura-row" style={{ marginTop: 16 }}>
+        <button className="aura-btn good" onClick={() => preset('max')}>
+          Max aura
+        </button>
+        <button className="aura-btn bad" onClick={() => preset('negative')}>
+          Negative aura
+        </button>
+        <button className="aura-btn neutral" onClick={() => preset('reset')}>
+          Reset
+        </button>
+      </div>
+
+      <div className="pill-grid" style={{ marginTop: 12 }}>
+        {SIM_ACTIONS.map((a) => {
+          const metric = a.metric ? (post as any)[a.metric] || 0 : 0
+          const active = extra.has(a.id)
+          return (
+            <button
+              key={a.id}
+              className={`pill-toggle ${active ? 'on' : ''} ${a.weight < 0 ? 'negative' : ''}`}
+              onClick={() => toggle(a.id)}
+            >
+              {a.label}
+              {a.metric && metric > 0 ? (
+                <span style={{ opacity: 0.55 }}>+1</span>
+              ) : (
+                <span style={{ opacity: 0.55 }}>{a.weight > 0 ? `+${a.weight}` : a.weight}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function MoveRow({ move, author }: { move: Move; author: Author | null }) {
+  const tone = MOVE_TONE[move.move_type]
+  return (
+    <div
+      className="playbook-row"
+      style={{ borderLeftColor: (tone && TONE_COLOR[tone]) || 'var(--ink)' }}
+    >
+      <span className={`sim-chip ${tone || ''}`}>
         {move.move_type.replace(/_/g, ' ')}
       </span>
       <h3 className="cell-title" style={{ marginTop: 10 }}>
