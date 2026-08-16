@@ -22,6 +22,18 @@ const STAGES = [
 export function ScanStatus({ scanId }: { scanId: string }) {
   const [scan, setScan] = useState<Scan | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // The backend races to the last stage and sits on the LLM call, which made
+  // every step flash green at once. Pace the checklist: each step holds for a
+  // beat before the display catches up to the real stage.
+  const [displayStage, setDisplayStage] = useState(0)
+
+  const actualStage = scan ? Math.max(0, STAGES.findIndex((s) => s.key === scan.stage)) : 0
+
+  useEffect(() => {
+    if (displayStage >= actualStage) return
+    const t = setTimeout(() => setDisplayStage((s) => Math.min(s + 1, actualStage)), 2400)
+    return () => clearTimeout(t)
+  }, [displayStage, actualStage])
 
   useEffect(() => {
     let cancelled = false
@@ -110,11 +122,7 @@ export function ScanStatus({ scanId }: { scanId: string }) {
     )
   }
 
-  const stageIndex = Math.max(
-    0,
-    STAGES.findIndex((s) => s.key === scan.stage)
-  )
-  const progress = ((stageIndex + 0.5) / STAGES.length) * 100
+  const progress = ((displayStage + 0.5) / STAGES.length) * 100
 
   return (
     <Section theme="dark" eyebrow="Cooking your scorecard 🍳">
@@ -147,7 +155,7 @@ export function ScanStatus({ scanId }: { scanId: string }) {
 
           <div style={{ marginTop: 24 }}>
             {STAGES.map((s, i) => {
-              const state = i < stageIndex ? 'done' : i === stageIndex ? 'current' : 'pending'
+              const state = i < displayStage ? 'done' : i === displayStage ? 'current' : 'pending'
               return (
                 <div key={s.key} className={`stage-row ${state}`}>
                   <span className="stage-mark">

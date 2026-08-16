@@ -38,7 +38,7 @@ function Footer() {
             <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
               Inspired by Inside the For You ↗
             </a>
-            <a href="https://github.com/dabit3/insidetheforyou" target="_blank" rel="noreferrer">
+            <a href="https://github.com/sugaroverflow/foryouplaybook" target="_blank" rel="noreferrer">
               Source ↗
             </a>
             <a href="https://deepwiki.com/xai-org/x-algorithm/" target="_blank" rel="noreferrer">
@@ -64,9 +64,13 @@ function Footer() {
           </div>
         </div>
         <p className="small" style={{ marginTop: 24, maxWidth: 640 }}>
-          Forked and extended from Nader Dabit's Inside the For You. ForYou Playbook reads your own
-          X posts under the current For You regime and generates a personal strategy. It is not
-          affiliated with X. Algorithm insights are based on the open-source X ranking snapshot.
+          Forked from Nader Dabit's Inside the For You. ForYou Playbook reads your X posts under
+          the current algorithm and scores your engagement. It is not affiliated with X and uses
+          the open-source{' '}
+          <a href="https://github.com/xai-org/x-algorithm" target="_blank" rel="noreferrer">
+            X ranking snapshot
+          </a>
+          .
         </p>
       </div>
     </footer>

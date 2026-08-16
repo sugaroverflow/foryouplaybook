@@ -114,6 +114,7 @@ Rules:
 - Exactly one move must have move_type "rewrite" and include rewrite_text.
 - One move of each type: rewrite, double_down, change, go_talk, experiment.
 - Be specific. Quote post patterns when possible.
+- Ground discoveries and moves in the open-source ranking weights, citing the multiplier when relevant: replying to a reply on your post = 75x, a reply = 13.5x, a profile click = 12x, a repost = 1x, a like = 0.5x, a report = -369x. Example: "your question posts pull 3x more replies, and a reply is worth 27 likes to the ranker".
 - Never write post IDs or long numbers in any headline, explanation, title, or body text. When referencing a specific post, quote a short excerpt of its text (8 words or fewer, in quotation marks) or describe it plainly ("your post about ..."). Post IDs belong only in evidence_post_ids.
 - Do not promise viral lift.
 - Do not infer sensitive traits.

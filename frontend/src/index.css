@@ -1405,6 +1405,37 @@ a {
   margin-bottom: 18px;
 }
 
+/* Header: grade stamped above the student photo, text to the right */
+.card-head-grid {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.card-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.card-left .grade-stamp {
+  position: static;
+}
+
+.card-left .card-avatar {
+  width: 96px;
+  height: 96px;
+  font-size: 40px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.card-right {
+  flex: 1;
+  min-width: 0;
+}
+
 .card-handle {
   display: block;
   font-family: var(--mono);
@@ -1461,8 +1492,9 @@ a {
 .grade-tile-label {
   display: block;
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted-on-light);
   white-space: nowrap;
@@ -1495,11 +1527,13 @@ a {
   color: var(--muted-on-light);
 }
 
-/* In-card tabs, same hard-shadow language as fx-btn */
+/* In-card folder tabs: the active tab joins the panel below it */
 .playbook-tabs {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--ink);
+  padding: 0 12px;
 }
 
 .playbook-tab {
@@ -1509,17 +1543,18 @@ a {
   text-transform: uppercase;
   padding: 9px 16px 10px;
   border: 1px solid var(--ink);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: var(--paper);
+  color: var(--muted-on-light);
   cursor: pointer;
-  box-shadow: 2px 2px 0 var(--ink);
-  transition: background 0.15s, color 0.15s, transform 0.1s, box-shadow 0.1s;
+  transition: background 0.15s, color 0.15s;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
   text-align: left;
+  position: relative;
 }
 
 .tab-kicker {
@@ -1529,26 +1564,17 @@ a {
 }
 
 .playbook-tab:hover:not(.on) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--ink);
+  background: var(--paper-2);
+  color: var(--ink);
 }
 
-.playbook-tab:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 var(--ink);
-}
-
-/* Selected tab sits pressed-in, like a held-down key */
+/* Active tab: white like the card, dropped 1px to cover the baseline rule */
 .playbook-tab.on {
-  background: var(--ink);
-  color: var(--white);
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 var(--ink);
+  background: var(--white);
+  color: var(--ink);
+  margin-bottom: -1px;
+  padding-bottom: 12px;
   cursor: default;
-}
-
-.playbook-tab.on .tab-kicker {
-  color: var(--muted-on-dark);
 }
 
 .panel-note {
@@ -1561,13 +1587,62 @@ a {
 }
 
 .playbook-row {
-  padding: 20px 0;
+  padding: 20px 0 20px 16px;
   border-bottom: 1px dashed rgba(5, 5, 5, 0.25);
+  border-left: 3px solid transparent;
 }
 
 .playbook-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+/* The rulebook: the open-source ranker weights, quoted as an exhibit */
+.rulebook {
+  margin-top: 20px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--white);
+  padding: 16px 18px;
+}
+
+.rulebook .tag {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-on-dark);
+  margin-bottom: 12px;
+}
+
+.rulebook-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 56px;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .rulebook-row {
+    grid-template-columns: 110px 1fr 52px;
+    gap: 8px;
+    font-size: 11px;
+  }
+}
+
+.rulebook-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.rulebook-value {
+  text-align: right;
 }
 
 .rewrite-note {
@@ -1783,8 +1858,6 @@ button.boxlink {
 
   .grade-stamp {
     position: static;
-    float: right;
-    margin: 0 0 12px 12px;
     padding: 6px 10px 8px;
   }
 
@@ -1794,6 +1867,31 @@ button.boxlink {
 
   .card-head {
     padding-right: 0;
+  }
+
+  .card-head-grid {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card-left {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+
+  .card-left .card-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 30px;
+  }
+
+  .playbook-tabs {
+    padding: 0 6px;
+  }
+
+  .playbook-row {
+    padding-left: 12px;
   }
 
   .card-rule {

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import { API_URL } from '../api'
 import { Reveal, Section } from '../components/Reveal'
 
@@ -92,33 +91,17 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
             Discover your X scorecard.
           </h1>
           <p className="lede" style={{ marginTop: 24 }}>
-            We were inspired by{' '}
+            Inspired by{' '}
             <a href="https://x.com/dabit3" target="_blank" rel="noreferrer">
               Nader Dabit
             </a>
             's{' '}
             <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
               Inside the For You
-            </a>
-            , an interactive tour of how the X algorithm ranks posts — and built a personalized
-            version. Connect your account and we grade your own posts under the same ranking rules
-            to generate your scorecard.
-          </p>
-
-          <div
-            className="bar-track score-bar"
-            style={{ marginTop: 32, background: 'rgba(0, 0, 0, 0.1)' }}
-          >
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: '50%' }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-              style={{ height: '100%', background: 'var(--ink)' }}
-            />
-          </div>
-          <p className="small" style={{ marginTop: 12 }}>
-            Global rulebook on the left. Your data completes the picture on the right.
+            </a>{' '}
+            (an interactive tour of how the X algorithm ranks posts), this is a personalized
+            version that will grade your posts under the same ranking rules and generate a
+            scorecard and some recommendations.
           </p>
 
           <button
@@ -131,7 +114,7 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
               ? 'Out of scans this month'
               : waiting
                 ? 'Waiting for X authorization…'
-                : 'Generate my scorecard →'}
+                : 'Generate my scorecard'}
           </button>
           {auth.status === 'error' && (
             <p className="small" style={{ marginTop: 12, color: '#c22a2a' }}>
@@ -144,8 +127,8 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
           </p>
           <p className="small mono" style={{ marginTop: 10, fontSize: 12 }}>
             {budget
-              ? `${budget.remaining}/${budget.total} scans remaining this month — this runs on our X API budget, not yours. One scan per person per month.`
-              : 'Limited scans per month — this runs on our X API budget, not yours.'}{' '}
+              ? `${budget.remaining}/${budget.total} scans remaining this month — this runs on our own X budget, one scan per person.`
+              : 'Limited scans per month — this runs on our own X budget, one scan per person.'}{' '}
             Want to sponsor more scans? DM{' '}
             <a href="https://twitter.com/sugaroverflow" target="_blank" rel="noreferrer">
               @sugaroverflow
