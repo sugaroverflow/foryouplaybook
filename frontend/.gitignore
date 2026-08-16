@@ -28,3 +28,4 @@ SimpleEnglish
 # env
 .env
 .vercel
+.env*

@@ -86,6 +86,19 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
+  useEffect(() => {
+    const websiteId = import.meta.env.VITE_UMAMI_WEBSITE_ID
+    if (!websiteId) return
+    const src =
+      import.meta.env.VITE_UMAMI_SRC || 'https://sugaroverflow-analytics.up.railway.app/script.js'
+    if (document.querySelector(`script[data-website-id="${websiteId}"]`)) return
+    const script = document.createElement('script')
+    script.defer = true
+    script.src = src
+    script.setAttribute('data-website-id', websiteId)
+    document.head.appendChild(script)
+  }, [])
+
   function handleScanStart(id: string) {
     window.history.pushState(null, '', `/?scan=${encodeURIComponent(id)}`)
     setScanId(id)
