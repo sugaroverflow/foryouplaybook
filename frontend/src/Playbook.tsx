@@ -192,12 +192,9 @@ export function Playbook({ scanId }: { scanId: string }) {
     <Section id="top" theme="dark" eyebrow="Your ForYou scorecard">
       <Reveal>
         <div className="score-card playbook-card" ref={cardRef}>
-          <div className="card-head-grid">
-            <div className="card-left">
-              {overall && <GradeStamp grade={overall} />}
-              {data.author && <CardAvatar author={data.author} size={96} />}
-            </div>
-            <div className="card-right">
+          <div className="card-identity-row">
+            {data.author && <CardAvatar author={data.author} size={96} />}
+            <div className="card-identity-text">
               {data.author && <span className="card-handle">@{data.author.username}</span>}
               <span
                 className="tag"
@@ -207,19 +204,19 @@ export function Playbook({ scanId }: { scanId: string }) {
                   textTransform: 'uppercase',
                   color: 'var(--muted-on-light)',
                   display: 'block',
-                  marginTop: 2,
+                  marginTop: 4,
                 }}
               >
                 {data.scan.post_count} posts studied · {data.scan.archetype_confidence} confidence
               </span>
-              <h1 className="display" style={{ marginTop: 12 }}>
-                {data.scan.archetype}
-              </h1>
-              <p className="lede" style={{ marginTop: 16 }}>
-                {data.scan.archetype_description}
-              </p>
             </div>
+            {overall && <GradeStamp grade={overall} />}
           </div>
+
+          <h1 className="display">{data.scan.archetype}</h1>
+          <p className="lede" style={{ marginTop: 16 }}>
+            {data.scan.archetype_description}
+          </p>
 
           <hr className="card-rule" />
 
@@ -355,48 +352,94 @@ export function Playbook({ scanId }: { scanId: string }) {
   )
 }
 
-const SIM_ACTIONS = [
-  { id: 'fav', label: 'Like', weight: 0.5 },
-  { id: 'reply', label: 'Reply', weight: 5.0 },
-  { id: 'repost', label: 'Repost', weight: 1.0 },
-  { id: 'quote', label: 'Quote', weight: 5.0 },
-  { id: 'share', label: 'Share', weight: 2.0 },
-  { id: 'share_dm', label: 'Share via DM', weight: 5.0 },
-  { id: 'copy_link', label: 'Copy the link', weight: 20.0 },
-  { id: 'follow', label: 'Follow the author', weight: 4.0 },
-  { id: 'click', label: 'Open the post', weight: 0.4 },
-  { id: 'video', label: 'Watch the video', weight: 0.05 },
-  { id: 'not_interested', label: '"Not interested"', weight: -43.2 },
-  { id: 'block', label: 'Block the author', weight: -31.2 },
-  { id: 'mute', label: 'Mute the author', weight: -58.8 },
-  { id: 'report', label: 'Report', weight: -234.0 },
+type SimAction = { id: string; label: string; weight: number; metric: keyof Post | null }
+
+const SIM_ACTIONS: SimAction[] = [
+  { id: 'fav', label: 'Like', weight: 0.5, metric: 'likes' },
+  { id: 'reply', label: 'Reply', weight: 5.0, metric: 'replies' },
+  { id: 'repost', label: 'Repost', weight: 1.0, metric: 'reposts' },
+  { id: 'quote', label: 'Quote', weight: 5.0, metric: 'quotes' },
+  { id: 'share', label: 'Share', weight: 2.0, metric: null },
+  { id: 'share_dm', label: 'Share via DM', weight: 5.0, metric: null },
+  { id: 'copy_link', label: 'Copy the link', weight: 20.0, metric: null },
+  { id: 'follow', label: 'Follow the author', weight: 4.0, metric: null },
+  { id: 'click', label: 'Open the post', weight: 0.4, metric: null },
+  { id: 'video', label: 'Watch the video', weight: 0.05, metric: null },
+  { id: 'not_interested', label: '"Not interested"', weight: -43.2, metric: null },
+  { id: 'block', label: 'Block the author', weight: -31.2, metric: null },
+  { id: 'mute', label: 'Mute the author', weight: -58.8, metric: null },
+  { id: 'report', label: 'Report', weight: -234.0, metric: null },
 ]
 
-function baseScore(post: Post): number {
-  return (
-    (post.likes || 0) * 0.5 +
-    (post.replies || 0) * 5.0 +
-    (post.reposts || 0) * 1.0 +
-    (post.quotes || 0) * 5.0
-  )
+function computeScore(post: Post, enabled: Set<string>): number {
+  return SIM_ACTIONS.reduce((sum, a) => {
+    if (!enabled.has(a.id) || !a.metric) return sum
+    return sum + (post[a.metric] as number || 0) * a.weight
+  }, 0)
 }
 
-const MAX_SCORE = 200
-
 function PostPlayground({ posts, author }: { posts: Post[]; author: Author | null }) {
-  const topPosts = useMemo(
-    () =>
-      [...posts]
-        .sort((a, b) => baseScore(b) - baseScore(a))
-        .slice(0, 5)
-        .map((p) => ({ ...p, text: p.text || '(no text)' })),
-    [posts]
+  const [enabled, setEnabled] = useState<Set<string>>(
+    () => new Set(SIM_ACTIONS.filter((a) => a.metric).map((a) => a.id))
   )
+
+  const rankedPosts = useMemo(() => {
+    const withScore = posts.map((p) => ({
+      ...p,
+      text: p.text || '(no text)',
+      score: computeScore(p, enabled),
+    }))
+    withScore.sort((a, b) => b.score - a.score)
+    return withScore.slice(0, 5)
+  }, [posts, enabled])
+
+  function toggle(id: string) {
+    setEnabled((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function preset(mode: 'max' | 'negative' | 'reset') {
+    if (mode === 'reset') return setEnabled(new Set())
+    setEnabled(
+      new Set(SIM_ACTIONS.filter((a) => (mode === 'max' ? a.weight > 0 : a.weight < 0)).map((a) => a.id))
+    )
+  }
 
   return (
     <>
-      {topPosts.map((post, i) => (
-        <PostSim
+      <div className="aura-row" style={{ marginBottom: 16 }}>
+        <button className="aura-btn good" onClick={() => preset('max')}>
+          Max aura
+        </button>
+        <button className="aura-btn bad" onClick={() => preset('negative')}>
+          Negative aura
+        </button>
+        <button className="aura-btn neutral" onClick={() => preset('reset')}>
+          Reset
+        </button>
+      </div>
+
+      <div className="pill-grid" style={{ marginBottom: 24 }}>
+        {SIM_ACTIONS.map((a) => {
+          const active = enabled.has(a.id)
+          return (
+            <button
+              key={a.id}
+              className={`pill-toggle ${active ? 'on' : ''} ${a.weight < 0 ? 'negative' : ''}`}
+              onClick={() => toggle(a.id)}
+            >
+              {a.label} <span style={{ opacity: 0.55 }}>{a.weight > 0 ? `+${a.weight}` : a.weight}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {rankedPosts.map((post, i) => (
+        <RankedPost
           key={post.id}
           post={post}
           rank={i + 1}
@@ -407,137 +450,37 @@ function PostPlayground({ posts, author }: { posts: Post[]; author: Author | nul
   )
 }
 
-function PostSim({
+type RankedPostData = Post & { score: number }
+
+function RankedPost({
   post,
   rank,
   author,
 }: {
-  post: Post
+  post: RankedPostData
   rank: number
   author: Author
 }) {
-  const [extra, setExtra] = useState<Set<string>>(new Set())
-
-  const extraScore = SIM_ACTIONS.reduce(
-    (sum, a) => (extra.has(a.id) ? sum + a.weight : sum),
-    0
-  )
-  const score = baseScore(post) + extraScore
-
-  function toggle(id: string) {
-    setExtra((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function preset(mode: 'max' | 'negative' | 'reset') {
-    if (mode === 'reset') return setExtra(new Set())
-    setExtra(
-      new Set(
-        SIM_ACTIONS.filter((a) =>
-          mode === 'max' ? a.weight > 0 : a.weight < 0
-        ).map((a) => a.id)
-      )
-    )
-  }
+  const score = post.score
 
   return (
     <div className="playbook-row" style={{ borderLeftColor: score >= 0 ? '#0f7b3e' : '#c22a2a' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 32,
-          alignItems: 'start',
-        }}
-      >
-        <div>
-          <div className="score-card" style={{ padding: 24 }}>
-            <span
-              className="tag"
-              style={{
-                fontSize: 11,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                opacity: 0.6,
-              }}
-            >
-              Post score
-            </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 8 }}>
-              <motion.span
-                key={score}
-                initial={{ opacity: 0.4, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="display score-value"
-              >
-                {score > 0 ? '+' : ''}
-                {Number(score.toFixed(1))}
-              </motion.span>
-              <span className="small">
-                {score >= 20
-                  ? 'competes for the top of the feed'
-                  : score > 0
-                    ? 'competes for a spot'
-                    : score === 0
-                      ? 'invisible to the ranker'
-                      : 'buried'}
-              </span>
-            </div>
-            <div className="bar-track score-bar">
-              <motion.div
-                animate={{
-                  width: `${Math.min(Math.abs(score) / MAX_SCORE, 1) * 100}%`,
-                }}
-                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                style={{
-                  height: '100%',
-                  backgroundColor: score >= 0 ? 'var(--ink)' : 'transparent',
-                  backgroundImage:
-                    score < 0
-                      ? 'repeating-linear-gradient(45deg, #c22a2a 0 6px, transparent 6px 12px)'
-                      : undefined,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="aura-row" style={{ marginTop: 16 }}>
-            <button className="aura-btn good" onClick={() => preset('max')}>
-              Max aura
-            </button>
-            <button className="aura-btn bad" onClick={() => preset('negative')}>
-              Negative aura
-            </button>
-            <button className="aura-btn neutral" onClick={() => preset('reset')}>
-              Reset
-            </button>
-          </div>
-
-          <div className="pill-grid" style={{ marginTop: 12 }}>
-            {SIM_ACTIONS.map((a) => {
-              const active = extra.has(a.id)
-              return (
-                <button
-                  key={a.id}
-                  className={`pill-toggle ${active ? 'on' : ''} ${a.weight < 0 ? 'negative' : ''}`}
-                  onClick={() => toggle(a.id)}
-                >
-                  {a.label}{' '}
-                  <span style={{ opacity: 0.55 }}>{a.weight > 0 ? `+${a.weight}` : a.weight}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div style={{ minWidth: 0 }}>
-          <EvidenceTweet post={post} author={author} label={`#${rank}`} />
-        </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 12 }}>
+        <span className="display score-value">{rank}</span>
+        <span className="tag" style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}>
+          Score {Number(score.toFixed(1))}
+        </span>
+        <span className="small">
+          {score >= 20
+            ? 'top of feed'
+            : score > 0
+              ? 'feed spot'
+              : score === 0
+                ? 'invisible'
+                : 'buried'}
+        </span>
       </div>
+      <EvidenceTweet post={post} author={author} label={`#${rank}`} />
     </div>
   )
 }

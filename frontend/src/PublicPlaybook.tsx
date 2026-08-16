@@ -66,19 +66,16 @@ export function PublicPlaybook({ slug }: { slug: string }) {
     <Section id="top" theme="dark" eyebrow={`@${data.username}`}>
       <Reveal>
         <div className="score-card playbook-card">
-          <div className="card-head-grid">
-            <div className="card-left">
-              {overall && <GradeStamp grade={overall} />}
-              <CardAvatar
-                author={{
-                  username: data.username,
-                  displayName: data.displayName,
-                  profileImageUrl: data.profileImageUrl,
-                }}
-                size={96}
-              />
-            </div>
-            <div className="card-right">
+          <div className="card-identity-row">
+            <CardAvatar
+              author={{
+                username: data.username,
+                displayName: data.displayName,
+                profileImageUrl: data.profileImageUrl,
+              }}
+              size={96}
+            />
+            <div className="card-identity-text">
               <span className="card-handle">@{data.username}</span>
               <span
                 className="tag"
@@ -88,20 +85,22 @@ export function PublicPlaybook({ slug }: { slug: string }) {
                   textTransform: 'uppercase',
                   color: 'var(--muted-on-light)',
                   display: 'block',
-                  marginTop: 2,
+                  marginTop: 4,
                 }}
               >
                 {data.postCount} posts studied · {data.archetypeConfidence} confidence
               </span>
-              <p className="eyebrow" style={{ margin: '14px 0 8px' }}>
-                Apparently {data.displayName}'s X archetype is
-              </p>
-              <h1 className="display">{data.archetype}</h1>
-              <p className="lede" style={{ marginTop: 16 }}>
-                {data.archetypeDescription}
-              </p>
             </div>
+            {overall && <GradeStamp grade={overall} />}
           </div>
+
+          <p className="eyebrow" style={{ margin: '0 0 8px' }}>
+            Apparently {data.displayName}'s X archetype is
+          </p>
+          <h1 className="display">{data.archetype}</h1>
+          <p className="lede" style={{ marginTop: 16 }}>
+            {data.archetypeDescription}
+          </p>
 
           <hr className="card-rule" />
 

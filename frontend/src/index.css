@@ -1405,35 +1405,35 @@ a {
   margin-bottom: 18px;
 }
 
-/* Header: grade stamped above the student photo, text to the right */
-.card-head-grid {
+/* Identity strip: photo + handle as one unit, grade stamped on the far corner */
+.card-identity-row {
   display: flex;
-  gap: 32px;
-  align-items: flex-start;
-}
-
-.card-left {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 18px;
-  flex-shrink: 0;
+  gap: 20px;
+  padding-bottom: 24px;
+  border-bottom: 1px dashed rgba(5, 5, 5, 0.3);
+  margin-bottom: 24px;
 }
 
-.card-left .grade-stamp {
+.card-identity-row .grade-stamp {
   position: static;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
-.card-left .card-avatar {
+.card-identity-row .card-avatar {
   width: 96px;
   height: 96px;
   font-size: 40px;
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-.card-right {
-  flex: 1;
+.card-identity-text {
   min-width: 0;
+}
+
+.card-identity-text .card-handle {
+  font-size: 17px;
 }
 
 .card-handle {
@@ -1664,7 +1664,12 @@ a {
 
 /* Evidence: a real post pasted into the report like an exhibit */
 .playbook-card .sim-chip {
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 6px;
 }
 
 .conf-tag {
@@ -1869,21 +1874,20 @@ button.boxlink {
     padding-right: 0;
   }
 
-  .card-head-grid {
-    flex-direction: column;
-    gap: 16px;
+  .card-identity-row {
+    gap: 14px;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
   }
 
-  .card-left {
-    flex-direction: row-reverse;
-    justify-content: flex-end;
-    gap: 16px;
+  .card-identity-row .card-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 26px;
   }
 
-  .card-left .card-avatar {
-    width: 72px;
-    height: 72px;
-    font-size: 30px;
+  .card-identity-text .card-handle {
+    font-size: 14px;
   }
 
   .playbook-tabs {
