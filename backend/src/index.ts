@@ -28,13 +28,84 @@ app.get('/api/scans/:id', (c) => {
   return c.json(scan)
 })
 
+// Older scans have LLM text that cites raw post IDs; the evidence post is
+// embedded right below the text, so point there instead. Post IDs are 13-20
+// digit numbers — engagement counts never get that long.
+function scrubPostIds<T>(value: T): T {
+  if (typeof value !== 'string') return value
+  return value
+    .replace(/(?:your|the|this)\s+post\s+(?:id\s+)?\d{13,20}/gi, 'the post below')
+    .replace(/\bpost\s+\d{13,20}/gi, 'the post below')
+    .replace(/\s*\(?\b\d{13,20}\b\)?/g, '')
+    .replace(/(^|[.!?]\s+)the post below/g, '$1The post below') as T
+}
+
+// Resolve LLM-chosen evidence x_post_ids to real posts with their latest metrics
+// so the frontend can embed them instead of citing raw IDs.
+function evidencePosts(evidenceJson: string | null, userId: string) {
+  let ids: string[] = []
+  try {
+    ids = JSON.parse(evidenceJson || '[]')
+  } catch {
+    return []
+  }
+  return ids
+    .slice(0, 2)
+    .map((xPostId) =>
+      db
+        .prepare(
+          `SELECT p.x_post_id, p.text, p.created_at,
+                  ms.likes, ms.replies, ms.reposts, ms.impressions
+           FROM posts p
+           LEFT JOIN metric_snapshots ms ON ms.post_id = p.id
+           WHERE p.x_post_id = ? AND p.user_id = ?
+           ORDER BY ms.captured_at DESC
+           LIMIT 1`
+        )
+        .get(xPostId, userId)
+    )
+    .filter(Boolean)
+}
+
 app.get('/api/playbook/:scanId', (c) => {
   const scanId = c.req.param('scanId')
-  const scan = db.prepare('SELECT * FROM scans WHERE id = ?').get(scanId)
+  const scan = db.prepare('SELECT * FROM scans WHERE id = ?').get(scanId) as
+    | { user_id: string }
+    | undefined
   if (!scan) return c.json({ error: 'not found' }, 404)
-  const findings = db.prepare('SELECT * FROM findings WHERE scan_id = ?').all(scanId)
-  const moves = db.prepare('SELECT * FROM moves WHERE scan_id = ? ORDER BY move_type').all(scanId)
-  return c.json({ scan, findings, moves })
+  const user = db
+    .prepare('SELECT username, display_name, profile_image_url FROM users WHERE id = ?')
+    .get(scan.user_id) as
+    | { username: string; display_name: string | null; profile_image_url: string | null }
+    | undefined
+  const findings = db
+    .prepare('SELECT * FROM findings WHERE scan_id = ?')
+    .all(scanId) as Array<Record<string, unknown> & { evidence_json: string | null }>
+  const moves = db
+    .prepare('SELECT * FROM moves WHERE scan_id = ? ORDER BY move_type')
+    .all(scanId) as Array<Record<string, unknown> & { evidence_json: string | null }>
+  return c.json({
+    scan,
+    author: user
+      ? {
+          username: user.username,
+          displayName: user.display_name || user.username,
+          profileImageUrl: user.profile_image_url,
+        }
+      : null,
+    findings: findings.map((f) => ({
+      ...f,
+      headline: scrubPostIds(f.headline),
+      explanation: scrubPostIds(f.explanation),
+      evidence_posts: evidencePosts(f.evidence_json, scan.user_id),
+    })),
+    moves: moves.map((m) => ({
+      ...m,
+      title: scrubPostIds(m.title),
+      body: scrubPostIds(m.body),
+      evidence_posts: evidencePosts(m.evidence_json, scan.user_id),
+    })),
+  })
 })
 
 app.post('/api/share', async (c) => {

@@ -68,7 +68,12 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
         >
           <span
             className="tag"
-            style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--muted-on-light)',
+            }}
           >
             The algorithm is global. The playbook is yours.
           </span>
@@ -118,7 +123,7 @@ export function Splash({ onScanStart }: { onScanStart: (scanId: string) => void 
               {auth.message}
             </p>
           )}
-          <p className="small" style={{ marginTop: 16, opacity: 0.6 }}>
+          <p className="small" style={{ marginTop: 16 }}>
             X sign-in opens in a popup — this page stays put. Read-only access. Your data, your
             control. <a href="/?page=privacy">Privacy</a> · <a href="/?page=terms">Terms</a>
           </p>

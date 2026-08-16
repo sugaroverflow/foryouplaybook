@@ -114,6 +114,7 @@ Rules:
 - Exactly one move must have move_type "rewrite" and include rewrite_text.
 - One move of each type: rewrite, double_down, change, go_talk, experiment.
 - Be specific. Quote post patterns when possible.
+- Never write post IDs or long numbers in any headline, explanation, title, or body text. When referencing a specific post, quote a short excerpt of its text (8 words or fewer, in quotation marks) or describe it plainly ("your post about ..."). Post IDs belong only in evidence_post_ids.
 - Do not promise viral lift.
 - Do not infer sensitive traits.
 

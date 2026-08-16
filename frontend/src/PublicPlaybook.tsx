@@ -69,7 +69,12 @@ export function PublicPlaybook({ slug }: { slug: string }) {
           <div className="card-head">
             <span
               className="tag"
-              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+              style={{
+                fontSize: 11,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'var(--muted-on-light)',
+              }}
             >
               {data.postCount} posts studied · {data.archetypeConfidence} confidence
             </span>
@@ -114,7 +119,7 @@ export function PublicPlaybook({ slug }: { slug: string }) {
               Generate my scorecard
             </a>
           </div>
-          <p className="small" style={{ marginTop: 16, opacity: 0.6 }}>
+          <p className="small" style={{ marginTop: 16 }}>
             ForYou Playbook grades your own X posts under the current For You regime. Inspired by
             Nader Dabit's Inside the For You.
           </p>

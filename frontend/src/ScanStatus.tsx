@@ -86,7 +86,12 @@ export function ScanStatus({ scanId }: { scanId: string }) {
           >
             <span
               className="tag"
-              style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+              style={{
+                fontSize: 11,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'var(--muted-on-light)',
+              }}
             >
               {scan.post_count} posts read before it stopped
             </span>

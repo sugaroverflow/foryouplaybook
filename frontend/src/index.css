@@ -6,8 +6,8 @@
   --white: #ffffff;
   --line-dark: rgba(255, 255, 255, 0.18);
   --line-light: rgba(5, 5, 5, 0.25);
-  --muted-on-dark: rgba(255, 255, 255, 0.62);
-  --muted-on-light: rgba(5, 5, 5, 0.62);
+  --muted-on-dark: rgba(255, 255, 255, 0.72);
+  --muted-on-light: rgba(5, 5, 5, 0.7);
   --display: "Archivo", "Inter", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
   --sans: "Inter", system-ui, sans-serif;
@@ -1380,12 +1380,11 @@ a {
   margin: 28px 0;
 }
 
-/* Overall grade, stamped like a mark on a report card */
+/* Overall grade, stamped like a mark on a report card (rotation applied by motion) */
 .grade-stamp {
   position: absolute;
   top: 24px;
   right: 24px;
-  transform: rotate(5deg);
   border: 2px solid currentColor;
   border-radius: 10px;
   padding: 10px 16px 12px;
@@ -1406,7 +1405,7 @@ a {
   display: block;
   margin-top: 4px;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -1429,7 +1428,7 @@ a {
 .grade-tile-label {
   display: block;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted-on-light);
@@ -1451,7 +1450,7 @@ a {
   margin-top: 10px;
   height: 8px;
   border-radius: 4px;
-  background: rgba(5, 5, 5, 0.08);
+  background: rgba(5, 5, 5, 0.15);
   overflow: hidden;
 }
 
@@ -1459,7 +1458,7 @@ a {
   display: block;
   margin-top: 8px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted-on-light);
 }
 
@@ -1475,7 +1474,7 @@ a {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 10px 16px;
+  padding: 9px 16px 10px;
   border: 1px solid var(--ink);
   border-radius: 8px;
   background: transparent;
@@ -1484,11 +1483,19 @@ a {
   box-shadow: 2px 2px 0 var(--ink);
   transition: background 0.15s, color 0.15s, transform 0.1s, box-shadow 0.1s;
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
 }
 
-.playbook-tab:hover {
+.tab-kicker {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--muted-on-light);
+}
+
+.playbook-tab:hover:not(.on) {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--ink);
 }
@@ -1498,9 +1505,26 @@ a {
   box-shadow: 0 0 0 var(--ink);
 }
 
+/* Selected tab sits pressed-in, like a held-down key */
 .playbook-tab.on {
   background: var(--ink);
   color: var(--white);
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+  cursor: default;
+}
+
+.playbook-tab.on .tab-kicker {
+  color: var(--muted-on-dark);
+}
+
+.panel-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-on-light);
+  margin-top: 16px;
 }
 
 .playbook-row {
@@ -1524,10 +1548,135 @@ a {
 .rewrite-note .tag {
   display: block;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted-on-dark);
+}
+
+/* Evidence: a real post pasted into the report like an exhibit */
+.playbook-card .sim-chip {
+  font-size: 11px;
+}
+
+.conf-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(5, 5, 5, 0.35);
+  border-radius: 4px;
+  padding: 1px 7px;
+  color: var(--muted-on-light);
+  white-space: nowrap;
+}
+
+.group-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-on-light);
+  margin-top: 24px;
+}
+
+.evidence {
+  margin-top: 16px;
+}
+
+.evidence-caption {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-on-light);
+  margin-bottom: 8px;
+}
+
+a.tweet-compact {
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+  transition: transform 0.1s, box-shadow 0.1s, border-color 0.15s;
+}
+
+a.tweet-compact:hover {
+  text-decoration: none;
+  border-color: #71767b;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.tweet-compact .tweet-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.tweet-compact .tweet-name,
+.tweet-compact .tweet-meta {
+  font-size: 13px;
+}
+
+.tweet-compact .tweet-body {
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tweet-compact .tweet-actions {
+  margin-top: 8px;
+  max-width: 340px;
+}
+
+.tweet-compact .tweet-action {
+  font-size: 12px;
+}
+
+.tweet-compact .tweet-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Receipt stub: perforated tear-off footer holding the actions */
+.card-stub {
+  position: relative;
+  margin: 28px -32px 0;
+  padding: 24px 32px 0;
+  border-top: 2px dashed rgba(5, 5, 5, 0.35);
+}
+
+.card-stub::before,
+.card-stub::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.card-stub::before {
+  left: -11px;
+}
+
+.card-stub::after {
+  right: -11px;
+}
+
+.stub-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-on-light);
+  margin-top: 18px;
 }
 
 /* Scan progress checklist */
@@ -1550,7 +1699,6 @@ a {
 
 .stage-row.pending {
   color: var(--muted-on-light);
-  opacity: 0.6;
 }
 
 .stage-row.current .stage-mark {
@@ -1590,24 +1738,25 @@ button.boxlink {
 }
 
 .boxlink:disabled {
-  opacity: 0.55;
+  opacity: 0.65;
   cursor: default;
 }
 
 @media (max-width: 760px) {
   .grade-rail {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .grade-rail .grade-tile:last-child {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .grade-stamp {
     position: static;
-    display: inline-block;
-    margin-bottom: 16px;
-    transform: rotate(3deg);
+    float: right;
+    margin: 0 0 12px 12px;
+    padding: 6px 10px 8px;
+  }
+
+  .grade-stamp-letter {
+    font-size: 24px;
   }
 
   .card-head {
@@ -1616,5 +1765,10 @@ button.boxlink {
 
   .card-rule {
     margin: 20px 0;
+  }
+
+  .card-stub {
+    margin: 20px -16px 0;
+    padding: 16px 16px 0;
   }
 }

@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
 
+// Darkened from the fill palette so every grade passes WCAG AA as text on white
+// (C was 2.94:1 at #ca8a04; B/D failed at small sizes) while keeping the hue story.
 export const GRADE_COLOR: Record<string, string> = {
-  A: '#0f7b3e',
-  B: '#16a34a',
-  C: '#ca8a04',
-  D: '#ea580c',
+  A: '#0c6434',
+  B: '#15803d',
+  C: '#a16207',
+  D: '#c2410c',
   F: '#c22a2a',
 }
 
@@ -44,10 +46,17 @@ export function overallGrade(fit: Record<string, FitValue>): string | null {
 export function GradeStamp({ grade }: { grade: string }) {
   const color = GRADE_COLOR[grade] || '#888'
   return (
-    <div className="grade-stamp" style={{ color }}>
+    <motion.div
+      className="grade-stamp"
+      style={{ color }}
+      initial={{ opacity: 0, scale: 1.6, rotate: 18 }}
+      whileInView={{ opacity: 1, scale: 1, rotate: 5 }}
+      viewport={{ once: true }}
+      transition={{ delay: 0.35, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+    >
       <span className="grade-stamp-letter">{grade}</span>
       <span className="grade-stamp-label">Overall</span>
-    </div>
+    </motion.div>
   )
 }
 
