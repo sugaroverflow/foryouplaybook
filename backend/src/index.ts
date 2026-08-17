@@ -198,7 +198,9 @@ app.post('/api/share', async (c) => {
   }
   // The frontend domain proxies /s/*, /c/* and /card/* back here
   // (Vercel rewrites, Vite dev proxy), so shared links carry the real domain.
-  const shareUrl = `${config.frontendUrl}/s/${user.username}`
+  // ?v= makes each share a URL X has never scraped: its per-URL card cache
+  // otherwise pins whatever it saw first (including past broken states).
+  const shareUrl = `${config.frontendUrl}/s/${user.username}?v=${Date.now().toString(36)}`
   const imageUrl = `${config.frontendUrl}/card/${user.username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${user.username}`
   return c.json({ shareUrl, imageUrl, publicUrl })
@@ -261,11 +263,23 @@ ${dims ? `<meta property="og:image:width" content="${dims.width}">\n<meta proper
 <meta name="twitter:image" content="${imageUrl}">
 <meta name="twitter:image:alt" content="@${username}'s ForYou scorecard with letter grades">
 <title>ForYou Playbook for @${username}</title>
-<script>window.location.replace(${JSON.stringify(publicUrl)})</script>
+<style>
+  body { margin: 0; background: #050505; font-family: 'Helvetica Neue', Arial, sans-serif;
+         min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; }
+  .wrap { max-width: 720px; width: 100%; text-align: center; }
+  img.card { width: 100%; height: auto; border: 1px solid #050505; border-radius: 16px; box-shadow: 6px 6px 0 rgba(255,255,255,0.45); }
+  a.open { display: inline-block; margin-top: 28px; font-family: ui-monospace, monospace; font-size: 13px;
+           letter-spacing: 0.1em; text-transform: uppercase; color: #050505; background: #ffffff;
+           border: 1px solid rgba(255,255,255,0.6); border-radius: 8px; padding: 13px 22px;
+           text-decoration: none; box-shadow: 3px 3px 0 rgba(255,255,255,0.45); }
+</style>
 </head>
 <body>
-<p>ForYou Playbook for @${username}</p>
-<p><a href="${publicUrl}">Open scorecard</a></p>
+<div class="wrap">
+  <img class="card" src="${imageUrl}" alt="@${username}'s ForYou scorecard">
+  <br>
+  <a class="open" href="${publicUrl}">Open the full scorecard</a>
+</div>
 </body>
 </html>`
   return html
