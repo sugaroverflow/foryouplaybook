@@ -9,6 +9,8 @@ export default defineConfig({
     proxy: {
       '/c': 'http://localhost:3000',
       '/card': 'http://localhost:3000',
+      // Regex keys: /s/ must not swallow /src/*, /@ must not catch /@vite/*.
+      '^/s/[A-Za-z0-9_]+$': 'http://localhost:3000',
       '^/@[A-Za-z0-9_]+$': 'http://localhost:3000',
     },
   },

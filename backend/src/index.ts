@@ -196,9 +196,9 @@ app.post('/api/share', async (c) => {
   } catch (e) {
     console.error('card generation failed', e)
   }
-  // The frontend domain proxies /@username, /c/* and /card/* back here
+  // The frontend domain proxies /s/*, /c/* and /card/* back here
   // (Vercel rewrites, Vite dev proxy), so shared links carry the real domain.
-  const shareUrl = `${config.frontendUrl}/@${user.username}`
+  const shareUrl = `${config.frontendUrl}/s/${user.username}`
   const imageUrl = `${config.frontendUrl}/card/${user.username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${user.username}`
   return c.json({ shareUrl, imageUrl, publicUrl })
@@ -238,7 +238,7 @@ function ogPage(username: string): string | null {
   const publicUrl = `${config.frontendUrl}/?p=${username}`
   // Canonical must be a page WITH card tags: scrapers that follow og:url
   // would otherwise re-scrape the SPA, which has none.
-  const selfUrl = `${config.frontendUrl}/@${username}`
+  const selfUrl = `${config.frontendUrl}/s/${username}`
   const dims = pngSize(join(cardsDir, `${username}.png`))
   const displayName = user.display_name || user.username
   const html = `<!doctype html>
@@ -271,7 +271,15 @@ ${dims ? `<meta property="og:image:width" content="${dims.width}">\n<meta proper
   return html
 }
 
-// The pretty share URL: foryouplaybook.com/@username
+// The share URL: foryouplaybook.com/s/username. Plain path on purpose —
+// t.co and crawlers percent-encode "@" in paths, which broke rewrite matching.
+app.get('/s/:username', (c) => {
+  const html = ogPage(c.req.param('username'))
+  if (!html) return c.text('not found', 404)
+  return c.html(html)
+})
+
+// Older shared links used /@username; keep serving the literal form.
 app.get('/:handle{@[A-Za-z0-9_]{1,15}}', (c) => {
   const html = ogPage(c.req.param('handle').slice(1))
   if (!html) return c.text('not found', 404)
