@@ -590,7 +590,11 @@ function ShareSection({
     if (!cardRef.current) return
     setLoading(true)
     try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        filter: (node) => !(node instanceof HTMLImageElement),
+      })
       const res = await fetch(`${API_URL}/api/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
