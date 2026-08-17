@@ -7,6 +7,7 @@ import { config } from './config.js'
 import { db } from './db.js'
 import { auth } from './auth.js'
 import { scanBudget } from './budget.js'
+import { generateCardPng } from './card.js'
 
 // Keep card images next to the sqlite file so they live on the persistent
 // volume in production (/app/data) instead of the ephemeral container fs.
@@ -154,29 +155,50 @@ app.get('/api/playbook/user/:username', (c) => {
 })
 
 app.post('/api/share', async (c) => {
-  const body = (await c.req.json()) as { scanId: string; shareEnabled: boolean; image: string }
-  const scan = db.prepare('SELECT user_id FROM scans WHERE id = ?').get(body.scanId) as
-    | { user_id: string }
+  const body = (await c.req.json()) as { scanId: string; shareEnabled: boolean }
+  const scan = db
+    .prepare('SELECT user_id, archetype, archetype_confidence, post_count, fit_json FROM scans WHERE id = ?')
+    .get(body.scanId) as
+    | {
+        user_id: string
+        archetype: string | null
+        archetype_confidence: string | null
+        post_count: number
+        fit_json: string | null
+      }
     | undefined
   if (!scan) return c.json({ error: 'not found' }, 404)
-  const user = db.prepare('SELECT username FROM users WHERE id = ?').get(scan.user_id) as {
+  const user = db
+    .prepare('SELECT username, display_name, profile_image_url FROM users WHERE id = ?')
+    .get(scan.user_id) as {
     username: string
+    display_name: string | null
+    profile_image_url: string | null
   }
   db.prepare('UPDATE users SET share_enabled = ?, public_slug = ? WHERE id = ?').run(
     body.shareEnabled ? 1 : 0,
     user.username,
     scan.user_id
   )
-  if (body.image) {
-    const base64 = body.image.replace(/^data:image\/png;base64,/, '')
-    const buf = Buffer.from(base64, 'base64')
-    writeFileSync(join(cardsDir, `${user.username}.png`), buf)
+  // Render the card server-side: browser captures were at the mercy of CORS
+  // (missing avatars) and produced images X refused for size or shape.
+  try {
+    const png = await generateCardPng({
+      username: user.username,
+      displayName: user.display_name || user.username,
+      avatarUrl: user.profile_image_url,
+      archetype: scan.archetype || 'Your ForYou scorecard',
+      confidence: scan.archetype_confidence || 'medium',
+      postCount: scan.post_count,
+      fit: scan.fit_json ? JSON.parse(scan.fit_json) : {},
+    })
+    writeFileSync(join(cardsDir, `${user.username}.png`), png)
+  } catch (e) {
+    console.error('card generation failed', e)
   }
-  // The frontend domain proxies /c/* and /card/* back here (Vercel rewrites,
-  // Vite dev proxy), so shared links carry the real domain, not Railway's.
-  // The ?v= makes each share a fresh URL to X's card scraper — otherwise a
-  // scrape cached while the card was missing sticks for days.
-  const shareUrl = `${config.frontendUrl}/c/${user.username}?v=${Date.now()}`
+  // The frontend domain proxies /@username, /c/* and /card/* back here
+  // (Vercel rewrites, Vite dev proxy), so shared links carry the real domain.
+  const shareUrl = `${config.frontendUrl}/@${user.username}`
   const imageUrl = `${config.frontendUrl}/card/${user.username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${user.username}`
   return c.json({ shareUrl, imageUrl, publicUrl })
@@ -207,17 +229,16 @@ function pngSize(file: string): { width: number; height: number } | null {
   }
 }
 
-app.get('/c/:username', async (c) => {
-  const username = c.req.param('username')
+function ogPage(username: string): string | null {
   const user = db
     .prepare('SELECT username, display_name FROM users WHERE username = ? AND share_enabled = 1')
     .get(username) as { username: string; display_name: string } | undefined
-  if (!user) return c.text('not found', 404)
+  if (!user) return null
   const imageUrl = `${config.frontendUrl}/card/${username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${username}`
-  // Canonical must be THIS page: scrapers that follow og:url would otherwise
-  // re-scrape the SPA, which has no card tags.
-  const selfUrl = `${config.frontendUrl}/c/${username}`
+  // Canonical must be a page WITH card tags: scrapers that follow og:url
+  // would otherwise re-scrape the SPA, which has none.
+  const selfUrl = `${config.frontendUrl}/@${username}`
   const dims = pngSize(join(cardsDir, `${username}.png`))
   const displayName = user.display_name || user.username
   const html = `<!doctype html>
@@ -247,6 +268,20 @@ ${dims ? `<meta property="og:image:width" content="${dims.width}">\n<meta proper
 <p><a href="${publicUrl}">Open scorecard</a></p>
 </body>
 </html>`
+  return html
+}
+
+// The pretty share URL: foryouplaybook.com/@username
+app.get('/:handle{@[A-Za-z0-9_]{1,15}}', (c) => {
+  const html = ogPage(c.req.param('handle').slice(1))
+  if (!html) return c.text('not found', 404)
+  return c.html(html)
+})
+
+// Older shared links used /c/username; keep serving them.
+app.get('/c/:username', (c) => {
+  const html = ogPage(c.req.param('username'))
+  if (!html) return c.text('not found', 404)
   return c.html(html)
 })
 

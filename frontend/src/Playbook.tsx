@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { toPng } from 'html-to-image'
 import { API_URL } from './api'
 import { Reveal, Section } from './components/Reveal'
 import { CardAvatar } from './components/Avatar'
@@ -149,9 +148,6 @@ export function Playbook({
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('review')
   const cardRef = useRef<HTMLDivElement>(null)
-  // X card images cap at 4096px a side and read best near 2:1 — capture just
-  // the header + grade rail, not the whole (very tall) card.
-  const shareRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const url = scanId
@@ -210,7 +206,6 @@ export function Playbook({
     <Section id="top" theme="dark" eyebrow="Your ForYou scorecard">
       <Reveal>
         <div className="score-card playbook-card" ref={cardRef}>
-          <div className="share-capture" ref={shareRef}>
           <div className="card-identity-row">
             {data.author && <CardAvatar author={data.author} size={96} />}
             <div className="card-identity-text">
@@ -240,7 +235,6 @@ export function Playbook({
           <hr className="card-rule" />
 
           <GradeRail fit={fit} />
-          </div>
 
           <hr className="card-rule" />
 
@@ -351,11 +345,7 @@ export function Playbook({
 
           <div className="card-stub">
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <ShareSection
-                scanId={data.scan.id}
-                archetype={data.scan.archetype}
-                captureRef={shareRef}
-              />
+              <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
               <DeleteSection scanId={data.scan.id} />
             </div>
             <p className="stub-meta">
@@ -580,96 +570,36 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
-function ShareSection({
-  scanId,
-  archetype,
-  captureRef,
-}: {
-  scanId: string
-  archetype: string
-  captureRef: React.RefObject<HTMLDivElement | null>
-}) {
-  const [shareUrl, setShareUrl] = useState<string | null>(null)
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
-  const [imageCopied, setImageCopied] = useState(false)
+function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
   const [loading, setLoading] = useState(false)
 
-  async function share() {
-    if (!captureRef.current) return
+  async function shareToX() {
     setLoading(true)
+    // Open the tab synchronously so popup blockers honor the click, then
+    // point it at the intent once the card is ready server-side.
+    const tab = window.open('', '_blank')
     try {
-      const dataUrl = await toPng(captureRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        // If an image can't be fetched (e.g. CORS), degrade to a blank pixel
-        // instead of failing the whole capture.
-        imagePlaceholder:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      })
       const res = await fetch(`${API_URL}/api/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId, shareEnabled: true, image: dataUrl }),
+        body: JSON.stringify({ scanId, shareEnabled: true }),
       })
       if (!res.ok) throw new Error('share failed')
       const j = await res.json()
-      setImageDataUrl(dataUrl)
-      setShareUrl(j.shareUrl)
+      const intent = `https://x.com/intent/tweet?url=${encodeURIComponent(j.shareUrl)}&text=${encodeURIComponent(`apparently my X archetype is ${archetype}`)}`
+      if (tab) tab.location.href = intent
+      else window.location.href = intent
     } catch {
-      alert('Could not generate scorecard image.')
+      tab?.close()
+      alert('Could not prepare the share. Try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  async function copyImage() {
-    if (!imageDataUrl) return
-    try {
-      const blob = await (await fetch(imageDataUrl)).blob()
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-      setImageCopied(true)
-      setTimeout(() => setImageCopied(false), 2500)
-    } catch {
-      // Clipboard images not available (e.g. permissions): download instead
-      // so the card can still be attached to the tweet by hand.
-      const a = document.createElement('a')
-      a.href = imageDataUrl
-      a.download = 'foryou-scorecard.png'
-      a.click()
-    }
-  }
-
-  if (shareUrl) {
-    return (
-      <>
-        <a
-          className="boxlink"
-          href={`https://x.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`apparently my X archetype is ${archetype}`)}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Share to X
-        </a>
-        <button className="boxlink" onClick={copyImage}>
-          {imageCopied ? 'Copied — paste it in your tweet' : 'Copy card image'}
-        </button>
-        <button
-          className="boxlink"
-          onClick={() => {
-            navigator.clipboard.writeText(shareUrl)
-            alert('Link copied')
-          }}
-        >
-          Copy link
-        </button>
-      </>
-    )
-  }
-
   return (
-    <button className="boxlink" onClick={share} disabled={loading}>
-      {loading ? 'Creating image…' : 'Share my scorecard'}
+    <button className="boxlink" onClick={shareToX} disabled={loading}>
+      {loading ? 'Preparing your card\u2026' : 'Share to X'}
     </button>
   )
 }

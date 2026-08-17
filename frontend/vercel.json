@@ -5,6 +5,10 @@
   "installCommand": "npm install",
   "rewrites": [
     {
+      "source": "/@:username",
+      "destination": "https://foryouplaybook-production.up.railway.app/@:username"
+    },
+    {
       "source": "/c/:username",
       "destination": "https://foryouplaybook-production.up.railway.app/c/:username"
     },
