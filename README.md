@@ -4,11 +4,11 @@
 
 ForYou Playbook is a personal X scorecard. It reads your recent posts under the current For You algorithm, grades them across five dimensions, and gives you five concrete moves to try next. It also includes a Nader-style playground where you can toggle engagement actions on your top posts and watch the score change.
 
-The app was forked from Nader Dabit's [Inside the For You](https://insidetheforyou.com) and extended with read-only X OAuth, a SQLite backend, and an LLM analysis step.
+The app was forked from Nader Dabit's [Inside the For You](https://insidetheforyou.com) and extended with X OAuth, a SQLite backend, and an LLM analysis step.
 
 ## What it does
 
-1. You connect your X account with read-only access.
+1. You connect your X account (reads your posts; writes only the scorecard post you approve).
 2. The backend fetches up to your last 100 posts from the current For You regime.
 3. It calculates an A-F ForYou Fit profile across five dimensions: Conversation, Travels, Curiosity, Reach, and Momentum.
 4. Grok reads the posts and metrics to find three patterns and recommend five moves.
@@ -80,7 +80,7 @@ See [DEPLOY.md](./DEPLOY.md) for the full checklist. The short version:
 
 ## Important notes
 
-- The app only uses read-only X scopes: `tweet.read users.read offline.access`. It never posts, like, follow, DM, or act for you.
+- X scopes: `tweet.read users.read tweet.write media.write offline.access`. Reads are the product; the only write the app ever makes is your scorecard post, and only when you review it in the composer and tap "Post to X". It never likes, follows, DMs, or acts on its own.
 - SQLite is ephemeral on Railway unless you add a volume at `/app/data`.
 - The X API has monthly read limits. `MAX_POSTS` and `MONTHLY_SCAN_BUDGET` protect against quota overruns.
 - Grok is used for all copy, but the recommendations are grounded in the open-source X ranking weights and the user's own posts.

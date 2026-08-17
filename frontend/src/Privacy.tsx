@@ -4,8 +4,9 @@ export function Privacy() {
       <h1 className="display">Privacy</h1>
       <p className="lede" style={{ marginTop: 24 }}>
         ForYou Playbook reads your own X posts and metrics to generate a personal strategy Playbook.
-        We do not post, like, follow, or send messages on your behalf. We do not analyze other users'
-        accounts. We do not train AI/ML models on your content.
+        The only thing it ever writes is your scorecard post — and only when you review it and tap
+        "Post to X" yourself. It never likes, follows, or sends messages, never posts on its own,
+        does not analyze other users' accounts, and does not train AI/ML models on your content.
       </p>
 
       <h2 className="cell-title" style={{ marginTop: 48 }}>

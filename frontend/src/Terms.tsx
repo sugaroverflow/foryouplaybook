@@ -3,8 +3,9 @@ export function Terms() {
     <div style={{ padding: '10vh 24px', maxWidth: 720, margin: '0 auto' }}>
       <h1 className="display">Terms</h1>
       <p className="lede" style={{ marginTop: 24 }}>
-        ForYou Playbook is an experimental, read-only tool. It is not a guaranteed growth service. It
-        does not promise virality. It does not autonomously post or interact on X.
+        ForYou Playbook is an experimental tool. It is not a guaranteed growth service. It does not
+        promise virality. It never posts or interacts on X autonomously — the only write it can make
+        is your scorecard post, after you review it and tap "Post to X" yourself.
       </p>
 
       <h2 className="cell-title" style={{ marginTop: 48 }}>
