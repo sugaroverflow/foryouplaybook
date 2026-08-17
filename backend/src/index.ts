@@ -229,11 +229,15 @@ app.post('/api/share', async (c) => {
 // X suppresses link-preview cards for young domains, so a preview can't be
 // relied on. Requires the tweet.write/media.write scopes.
 app.post('/api/post-share', async (c) => {
-  const body = (await c.req.json()) as { scanId: string }
+  const body = (await c.req.json()) as { scanId: string; text?: string }
   const share = await prepareShare(body.scanId)
   if (!share) return c.json({ error: 'not found' }, 404)
   if (!share.png) return c.json({ error: 'card generation failed' }, 500)
-  const text = `apparently my X archetype is ${share.archetype}\n\n${share.shareUrl}`
+  // The user stages and edits the text in the app before posting.
+  const text =
+    typeof body.text === 'string' && body.text.trim()
+      ? body.text.trim().slice(0, 1000)
+      : `apparently my X archetype is ${share.archetype}\n\n${share.shareUrl}`
   try {
     const { tweetId } = await postScorecard(share.userId, text, share.png)
     return c.json({

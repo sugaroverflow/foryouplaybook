@@ -344,8 +344,8 @@ export function Playbook({
           </motion.div>
 
           <div className="card-stub">
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <ShareSection scanId={data.scan.id} />
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
               <DeleteSection scanId={data.scan.id} />
             </div>
             <p className="stub-meta">
@@ -570,9 +570,40 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
-function ShareSection({ scanId }: { scanId: string }) {
-  const [state, setState] = useState<'idle' | 'posting' | 'reauth' | 'done'>('idle')
+// X weights every URL as 23 characters regardless of length.
+function tweetLength(text: string): number {
+  return text.replace(/https?:\/\/\S+/g, 'x'.repeat(23)).length
+}
+
+function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
+  const [state, setState] = useState<
+    'idle' | 'loading' | 'composing' | 'posting' | 'reauth' | 'done'
+  >('idle')
+  const [text, setText] = useState('')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [tweetUrl, setTweetUrl] = useState<string | null>(null)
+
+  const chars = tweetLength(text)
+  const overLimit = chars > 280
+
+  async function openComposer() {
+    setState('loading')
+    try {
+      const res = await fetch(`${API_URL}/api/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanId }),
+      })
+      if (!res.ok) throw new Error('share failed')
+      const j = await res.json()
+      setImageUrl(j.imageUrl)
+      setText(`apparently my X archetype is ${archetype}\n\n${j.shareUrl}`)
+      setState('composing')
+    } catch {
+      alert('Could not prepare your card. Try again.')
+      setState('idle')
+    }
+  }
 
   async function post() {
     setState('posting')
@@ -580,7 +611,7 @@ function ShareSection({ scanId }: { scanId: string }) {
       const res = await fetch(`${API_URL}/api/post-share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId }),
+        body: JSON.stringify({ scanId, text }),
       })
       if (res.status === 403) {
         // Stored token predates the write scope: re-run the OAuth popup.
@@ -591,10 +622,9 @@ function ShareSection({ scanId }: { scanId: string }) {
       const j = await res.json()
       setTweetUrl(j.tweetUrl)
       setState('done')
-      window.open(j.tweetUrl, '_blank')
     } catch {
       alert('Could not post to X. Try again.')
-      setState('idle')
+      setState('composing')
     }
   }
 
@@ -613,7 +643,7 @@ function ShareSection({ scanId }: { scanId: string }) {
       popup?.close()
       // Re-auth reuses the existing scan and refreshes tokens; post again.
       if (data.scanId) post()
-      else setState('idle')
+      else setState('composing')
     }
     window.addEventListener('message', onMessage)
   }
@@ -634,11 +664,37 @@ function ShareSection({ scanId }: { scanId: string }) {
     )
   }
 
+  if (state === 'composing' || state === 'posting') {
+    return (
+      <div className="compose-box">
+        <span className="tag" style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--muted-on-light)' }}>
+          Your post — edit before it goes out
+        </span>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={4}
+          disabled={state === 'posting'}
+        />
+        {imageUrl && <img className="compose-img" src={imageUrl} alt="Your scorecard card" />}
+        <div className="compose-meta">
+          <span className={`compose-count ${overLimit ? 'over' : ''}`}>{chars}/280</span>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="boxlink" onClick={() => setState('idle')} disabled={state === 'posting'}>
+              Cancel
+            </button>
+            <button className="boxlink" onClick={post} disabled={state === 'posting' || overLimit || !text.trim()}>
+              {state === 'posting' ? 'Posting\u2026' : 'Post to X'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <button className="boxlink" onClick={post} disabled={state === 'posting'}>
-      {state === 'posting'
-        ? 'Posting your scorecard\u2026'
-        : `Post my scorecard to X`}
+    <button className="boxlink" onClick={openComposer} disabled={state === 'loading'}>
+      {state === 'loading' ? 'Preparing your card\u2026' : 'Share my scorecard'}
     </button>
   )
 }
