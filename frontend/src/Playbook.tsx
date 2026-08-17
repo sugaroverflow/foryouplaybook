@@ -401,6 +401,11 @@ function PostPlayground({ posts, author }: { posts: Post[]; author: Author | nul
     return withScore.slice(0, 5)
   }, [posts, weights])
 
+  const maxScore = useMemo(() => {
+    if (rankedPosts.length === 0) return 1
+    return Math.max(...rankedPosts.map((p) => Math.abs(p.score))) || 1
+  }, [rankedPosts])
+
   return (
     <div
       style={{
@@ -436,8 +441,8 @@ function PostPlayground({ posts, author }: { posts: Post[]; author: Author | nul
             </div>
             <input
               type="range"
-              min={-20}
-              max={20}
+              min={-50}
+              max={50}
               step={0.1}
               value={weights[a.id]}
               onChange={(e) =>
@@ -468,6 +473,7 @@ function PostPlayground({ posts, author }: { posts: Post[]; author: Author | nul
             key={post.id}
             post={post}
             rank={i + 1}
+            maxScore={maxScore}
             author={author ?? { username: 'unknown', displayName: 'Unknown', profileImageUrl: null }}
           />
         ))}
@@ -481,30 +487,37 @@ type RankedPostData = Post & { score: number }
 function RankedPost({
   post,
   rank,
+  maxScore,
   author,
 }: {
   post: RankedPostData
   rank: number
+  maxScore: number
   author: Author
 }) {
   const score = post.score
+  const width = maxScore ? Math.min((Math.abs(score) / maxScore) * 100, 100) : 0
 
   return (
     <div className="playbook-row" style={{ borderLeftColor: score >= 0 ? '#0f7b3e' : '#c22a2a' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 12 }}>
         <span className="display score-value">{rank}</span>
-        <span className="tag" style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}>
+        <span
+          className="tag"
+          style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
+        >
           Score {Number(score.toFixed(1))}
         </span>
-        <span className="small">
-          {score >= 20
-            ? 'top of feed'
-            : score > 0
-              ? 'feed spot'
-              : score === 0
-                ? 'invisible'
-                : 'buried'}
-        </span>
+      </div>
+      <div className="bar-track score-bar" style={{ marginBottom: 12 }}>
+        <motion.div
+          animate={{ width: `${width}%` }}
+          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+          style={{
+            height: '100%',
+            backgroundColor: score >= 0 ? 'var(--ink)' : '#c22a2a',
+          }}
+        />
       </div>
       <EvidenceTweet post={post} author={author} label={`#${rank}`} />
     </div>
