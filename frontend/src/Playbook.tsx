@@ -138,18 +138,32 @@ function EvidenceList({ posts, author }: { posts: EvidencePost[]; author: Author
   )
 }
 
-export function Playbook({ scanId }: { scanId: string }) {
+export function Playbook({
+  scanId,
+  username,
+}: {
+  scanId?: string
+  username?: string
+}) {
   const [data, setData] = useState<PlaybookData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('review')
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetch(`${API_URL}/api/playbook/${scanId}`)
+    const url = scanId
+      ? `${API_URL}/api/playbook/${scanId}`
+      : `${API_URL}/api/playbook/user/${encodeURIComponent(username || '')}`
+    fetch(url)
       .then((r) => r.json())
-      .then((d) => setData(d))
+      .then((d) => {
+        setData(d)
+        if (scanId && d.author?.username) {
+          window.history.replaceState(null, '', `/?u=${encodeURIComponent(d.author.username)}`)
+        }
+      })
       .catch(() => setError('Could not load playbook.'))
-  }, [scanId])
+  }, [scanId, username])
 
   if (error) {
     return (
@@ -409,51 +423,46 @@ function PostPlayground({ posts, author }: { posts: Post[]; author: Author | nul
   }, [rankedPosts])
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: 48,
-        alignItems: 'start',
-      }}
-    >
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="playground-panel">
+      <div className="playground-knobs">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <span
             className="tag"
             style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
           >
             The knobs
           </span>
-          <button className="aura-btn neutral" onClick={() => setWeights({ ...DEFAULT_WEIGHTS })}>
+          <button className="fx-btn" onClick={() => setWeights({ ...DEFAULT_WEIGHTS })}>
             Factory settings
           </button>
         </div>
 
-        {KNOBS.map((a) => (
-          <div key={a.id} style={{ marginBottom: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span className="small" style={{ fontWeight: 500 }}>
-                {a.label}
-              </span>
-              <span className="small mono" style={{ opacity: 0.7 }}>
-                {weights[a.id] > 0 ? '+' : ''}
-                {Number(weights[a.id].toFixed(1))}
-              </span>
+        <div className="knob-list">
+          {KNOBS.map((a) => (
+            <div key={a.id} className="knob-row">
+              <div className="knob-label-line">
+                <span className="small" style={{ fontWeight: 500 }}>
+                  {a.label}
+                </span>
+                <span className="small mono" style={{ opacity: 0.7 }}>
+                  {weights[a.id] > 0 ? '+' : ''}
+                  {Number(weights[a.id].toFixed(1))}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={-50}
+                max={50}
+                step={0.1}
+                value={weights[a.id]}
+                onChange={(e) =>
+                  setWeights((prev) => ({ ...prev, [a.id]: Number(e.target.value) }))
+                }
+                style={{ width: '100%', accentColor: '#0f7b3e' }}
+              />
             </div>
-            <input
-              type="range"
-              min={-50}
-              max={50}
-              step={0.1}
-              value={weights[a.id]}
-              onChange={(e) =>
-                setWeights((prev) => ({ ...prev, [a.id]: Number(e.target.value) }))
-              }
-              style={{ width: '100%', accentColor: '#0f7b3e' }}
-            />
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <div>
@@ -465,7 +474,7 @@ function PostPlayground({ posts, author }: { posts: Post[]; author: Author | nul
             textTransform: 'uppercase',
             opacity: 0.6,
             display: 'block',
-            marginBottom: 20,
+            marginBottom: 12,
           }}
         >
           Your feed, ranked
@@ -498,31 +507,38 @@ function RankedPost({
   author: Author
 }) {
   const score = post.score
+  const negative = score < 0
+  const accent = negative ? '#e5484d' : '#3ecf70'
   const width = maxScore ? Math.min((Math.abs(score) / maxScore) * 100, 100) : 0
 
   return (
-    <div className="playbook-row" style={{ borderLeftColor: score >= 0 ? '#0f7b3e' : '#c22a2a' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 12 }}>
-        <span className="display score-value">{rank}</span>
-        <span
-          className="tag"
-          style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.6 }}
-        >
-          Score {Number(score.toFixed(1))}
+    <motion.div
+      layout
+      transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+      className="ranked-row"
+      style={{ borderLeftColor: accent }}
+    >
+      <div className="ranked-top">
+        <span className="ranked-rank">{rank}</span>
+        {author.profileImageUrl ? (
+          <img className="ranked-avatar" src={author.profileImageUrl} alt="" />
+        ) : (
+          <div className="ranked-avatar">{(author.displayName[0] || '?').toUpperCase()}</div>
+        )}
+        <span className="ranked-text">{post.text}</span>
+        <span className="ranked-score" style={{ color: accent }}>
+          {score > 0 ? '+' : ''}
+          {Number(score.toFixed(1))}
         </span>
       </div>
-      <div className="bar-track score-bar" style={{ marginBottom: 12 }}>
+      <div className="ranked-bar">
         <motion.div
           animate={{ width: `${width}%` }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-          style={{
-            height: '100%',
-            backgroundColor: score >= 0 ? 'var(--ink)' : '#c22a2a',
-          }}
+          style={{ height: '100%', background: accent }}
         />
       </div>
-      <EvidenceTweet post={post} author={author} label={`#${rank}`} />
-    </div>
+    </motion.div>
   )
 }
 

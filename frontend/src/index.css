@@ -1756,6 +1756,115 @@ a.tweet-compact:hover {
   height: 15px;
 }
 
+/* Playground: knobs pinned beside a compact feed so re-ranking happens in view */
+.playground-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) 3fr;
+  gap: 32px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.playground-knobs {
+  position: sticky;
+  top: 64px;
+}
+
+.ranked-row {
+  background: #000;
+  border: 1px solid #2f3336;
+  border-left: 3px solid #3ecf70;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  color: #e7e9ea;
+}
+
+.ranked-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranked-rank {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #71767b;
+  width: 16px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.ranked-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: #1d9bf0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--sans);
+}
+
+.ranked-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ranked-score {
+  font-family: var(--mono);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ranked-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.knob-row {
+  margin-bottom: 10px;
+}
+
+.knob-label-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 760px) {
+  .playground-panel {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .playground-knobs {
+    position: static;
+  }
+
+  /* Two knob columns on mobile so the feed stays close under them */
+  .knob-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+  }
+}
+
 /* Receipt stub: perforated tear-off footer holding the actions */
 .card-stub {
   position: relative;

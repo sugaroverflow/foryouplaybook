@@ -76,12 +76,7 @@ function evidencePosts(evidenceJson: string | null, userId: string) {
     .filter(Boolean)
 }
 
-app.get('/api/playbook/:scanId', (c) => {
-  const scanId = c.req.param('scanId')
-  const scan = db.prepare('SELECT * FROM scans WHERE id = ?').get(scanId) as
-    | { user_id: string }
-    | undefined
-  if (!scan) return c.json({ error: 'not found' }, 404)
+function buildPlaybookResponse(scan: { id: string; user_id: string }) {
   const user = db
     .prepare('SELECT username, display_name, profile_image_url FROM users WHERE id = ?')
     .get(scan.user_id) as
@@ -89,10 +84,10 @@ app.get('/api/playbook/:scanId', (c) => {
     | undefined
   const findings = db
     .prepare('SELECT * FROM findings WHERE scan_id = ?')
-    .all(scanId) as Array<Record<string, unknown> & { evidence_json: string | null }>
+    .all(scan.id) as Array<Record<string, unknown> & { evidence_json: string | null }>
   const moves = db
     .prepare('SELECT * FROM moves WHERE scan_id = ? ORDER BY move_type')
-    .all(scanId) as Array<Record<string, unknown> & { evidence_json: string | null }>
+    .all(scan.id) as Array<Record<string, unknown> & { evidence_json: string | null }>
   const posts = db
     .prepare(
       `SELECT p.id, p.x_post_id, p.text, p.post_type, p.created_at,
@@ -110,7 +105,7 @@ app.get('/api/playbook/:scanId', (c) => {
        LIMIT 100`
     )
     .all(scan.user_id) as Array<Record<string, unknown>>
-  return c.json({
+  return {
     scan,
     author: user
       ? {
@@ -132,7 +127,29 @@ app.get('/api/playbook/:scanId', (c) => {
       body: scrubPostIds(m.body),
       evidence_posts: evidencePosts(m.evidence_json, scan.user_id),
     })),
-  })
+  }
+}
+
+app.get('/api/playbook/:scanId', (c) => {
+  const scanId = c.req.param('scanId')
+  const scan = db.prepare('SELECT * FROM scans WHERE id = ?').get(scanId) as
+    | { id: string; user_id: string }
+    | undefined
+  if (!scan) return c.json({ error: 'not found' }, 404)
+  return c.json(buildPlaybookResponse(scan))
+})
+
+app.get('/api/playbook/user/:username', (c) => {
+  const username = c.req.param('username')
+  const user = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as
+    | { id: string }
+    | undefined
+  if (!user) return c.json({ error: 'not found' }, 404)
+  const scan = db
+    .prepare('SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .get(user.id) as { id: string; user_id: string } | undefined
+  if (!scan) return c.json({ error: 'not found' }, 404)
+  return c.json(buildPlaybookResponse(scan))
 })
 
 app.post('/api/share', async (c) => {

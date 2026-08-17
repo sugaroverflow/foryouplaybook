@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Playbook } from './Playbook'
 import { Privacy } from './Privacy'
 import { PublicPlaybook } from './PublicPlaybook'
 import { ScanStatus } from './ScanStatus'
@@ -81,11 +82,17 @@ export default function App() {
   const [scanId, setScanId] = useState<string | null>(
     () => new URLSearchParams(window.location.search).get('scan')
   )
+  const [privateSlug, setPrivateSlug] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('u')
+  )
   const publicSlug = useMemo(() => new URLSearchParams(window.location.search).get('p'), [])
   const page = useMemo(() => new URLSearchParams(window.location.search).get('page'), [])
 
   useEffect(() => {
-    const onPop = () => setScanId(new URLSearchParams(window.location.search).get('scan'))
+    const onPop = () => {
+      setScanId(new URLSearchParams(window.location.search).get('scan'))
+      setPrivateSlug(new URLSearchParams(window.location.search).get('u'))
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -131,6 +138,15 @@ export default function App() {
       <>
         <Nav />
         <PublicPlaybook slug={publicSlug} />
+      </>
+    )
+  }
+
+  if (privateSlug) {
+    return (
+      <>
+        <Nav />
+        <Playbook username={privateSlug} />
       </>
     )
   }
