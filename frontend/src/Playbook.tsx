@@ -317,8 +317,12 @@ export function Playbook({ scanId }: { scanId: string }) {
             {tab === 'playground' && (
               <>
                 <p className="panel-note">
-                  Drag the knobs to re-rank your top 5 posts. No predicted probabilities here — just
-                  your real counts multiplied by the weights.
+                  Pulled from{' '}
+                  <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
+                    Nader's Inside the For You
+                  </a>{' '}
+                  — drag the knobs to re-rank your top 5 posts. No predicted probabilities here,
+                  just your real counts multiplied by the weights.
                 </p>
                 <PostPlayground posts={data.posts} author={data.author} />
               </>
