@@ -155,8 +155,9 @@ export function Playbook({
       ? `${API_URL}/api/playbook/${scanId}`
       : `${API_URL}/api/playbook/user/${encodeURIComponent(username || '')}`
     fetch(url)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        const d = (await r.json()) as { error?: string } & PlaybookData
+        if (!r.ok) throw new Error(d.error || 'not found')
         setData(d)
         if (scanId && d.author?.username) {
           window.history.replaceState(null, '', `/?u=${encodeURIComponent(d.author.username)}`)

@@ -2,14 +2,15 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { dirname, join, resolve } from 'node:path'
 import { config } from './config.js'
 import { db } from './db.js'
 import { auth } from './auth.js'
 import { scanBudget } from './budget.js'
 
-const cardsDir = join(dirname(fileURLToPath(import.meta.url)), '../../data/cards')
+// Keep card images next to the sqlite file so they live on the persistent
+// volume in production (/app/data) instead of the ephemeral container fs.
+const cardsDir = join(dirname(resolve(config.databaseUrl)), 'cards')
 if (!existsSync(cardsDir)) mkdirSync(cardsDir, { recursive: true })
 
 const app = new Hono()
