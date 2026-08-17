@@ -8,6 +8,7 @@ import { db } from './db.js'
 import { auth } from './auth.js'
 import { scanBudget } from './budget.js'
 import { generateCardPng } from './card.js'
+import { isReauthorize, postScorecard } from './post.js'
 
 // Keep card images next to the sqlite file so they live on the persistent
 // volume in production (/app/data) instead of the ephemeral container fs.
@@ -154,11 +155,20 @@ app.get('/api/playbook/user/:username', (c) => {
   return c.json(buildPlaybookResponse(scan))
 })
 
-app.post('/api/share', async (c) => {
-  const body = (await c.req.json()) as { scanId: string; shareEnabled: boolean }
+// Enable sharing, render the card server-side (browser captures were at the
+// mercy of CORS), persist it, and return everything both share flows need.
+async function prepareShare(scanId: string): Promise<{
+  userId: string
+  username: string
+  archetype: string
+  shareUrl: string
+  imageUrl: string
+  publicUrl: string
+  png: Buffer | null
+} | null> {
   const scan = db
     .prepare('SELECT user_id, archetype, archetype_confidence, post_count, fit_json FROM scans WHERE id = ?')
-    .get(body.scanId) as
+    .get(scanId) as
     | {
         user_id: string
         archetype: string | null
@@ -167,7 +177,7 @@ app.post('/api/share', async (c) => {
         fit_json: string | null
       }
     | undefined
-  if (!scan) return c.json({ error: 'not found' }, 404)
+  if (!scan) return null
   const user = db
     .prepare('SELECT username, display_name, profile_image_url FROM users WHERE id = ?')
     .get(scan.user_id) as {
@@ -175,15 +185,13 @@ app.post('/api/share', async (c) => {
     display_name: string | null
     profile_image_url: string | null
   }
-  db.prepare('UPDATE users SET share_enabled = ?, public_slug = ? WHERE id = ?').run(
-    body.shareEnabled ? 1 : 0,
+  db.prepare('UPDATE users SET share_enabled = 1, public_slug = ? WHERE id = ?').run(
     user.username,
     scan.user_id
   )
-  // Render the card server-side: browser captures were at the mercy of CORS
-  // (missing avatars) and produced images X refused for size or shape.
+  let png: Buffer | null = null
   try {
-    const png = await generateCardPng({
+    png = await generateCardPng({
       username: user.username,
       displayName: user.display_name || user.username,
       avatarUrl: user.profile_image_url,
@@ -196,14 +204,47 @@ app.post('/api/share', async (c) => {
   } catch (e) {
     console.error('card generation failed', e)
   }
-  // The frontend domain proxies /s/*, /c/* and /card/* back here
-  // (Vercel rewrites, Vite dev proxy), so shared links carry the real domain.
-  // ?v= makes each share a URL X has never scraped: its per-URL card cache
-  // otherwise pins whatever it saw first (including past broken states).
-  const shareUrl = `${config.frontendUrl}/s/${user.username}?v=${Date.now().toString(36)}`
-  const imageUrl = `${config.frontendUrl}/card/${user.username}.png`
-  const publicUrl = `${config.frontendUrl}/?p=${user.username}`
+  // ?v= keeps every share a URL X has never scraped (its per-URL card cache
+  // pins whatever it saw first, including past broken states).
+  return {
+    userId: scan.user_id,
+    username: user.username,
+    archetype: scan.archetype || 'my ForYou scorecard',
+    shareUrl: `${config.frontendUrl}/s/${user.username}?v=${Date.now().toString(36)}`,
+    imageUrl: `${config.frontendUrl}/card/${user.username}.png`,
+    publicUrl: `${config.frontendUrl}/?p=${user.username}`,
+  png,
+  }
+}
+
+app.post('/api/share', async (c) => {
+  const body = (await c.req.json()) as { scanId: string }
+  const share = await prepareShare(body.scanId)
+  if (!share) return c.json({ error: 'not found' }, 404)
+  const { shareUrl, imageUrl, publicUrl } = share
   return c.json({ shareUrl, imageUrl, publicUrl })
+})
+
+// Post the tweet on the user's behalf with the card attached as real media —
+// X suppresses link-preview cards for young domains, so a preview can't be
+// relied on. Requires the tweet.write/media.write scopes.
+app.post('/api/post-share', async (c) => {
+  const body = (await c.req.json()) as { scanId: string }
+  const share = await prepareShare(body.scanId)
+  if (!share) return c.json({ error: 'not found' }, 404)
+  if (!share.png) return c.json({ error: 'card generation failed' }, 500)
+  const text = `apparently my X archetype is ${share.archetype}\n\n${share.shareUrl}`
+  try {
+    const { tweetId } = await postScorecard(share.userId, text, share.png)
+    return c.json({
+      tweetUrl: `https://x.com/${share.username}/status/${tweetId}`,
+      shareUrl: share.shareUrl,
+    })
+  } catch (e) {
+    if (isReauthorize(e)) return c.json({ error: 'reauthorize' }, 403)
+    console.error('post-share failed', e)
+    return c.json({ error: 'post failed' }, 502)
+  }
 })
 
 // Hono treats ":username.png" as a param literally named "username.png",

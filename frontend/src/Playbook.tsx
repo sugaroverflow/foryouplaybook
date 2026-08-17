@@ -345,7 +345,7 @@ export function Playbook({
 
           <div className="card-stub">
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <ShareSection scanId={data.scan.id} archetype={data.scan.archetype} />
+              <ShareSection scanId={data.scan.id} />
               <DeleteSection scanId={data.scan.id} />
             </div>
             <p className="stub-meta">
@@ -570,36 +570,75 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
-function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
-  const [loading, setLoading] = useState(false)
+function ShareSection({ scanId }: { scanId: string }) {
+  const [state, setState] = useState<'idle' | 'posting' | 'reauth' | 'done'>('idle')
+  const [tweetUrl, setTweetUrl] = useState<string | null>(null)
 
-  async function shareToX() {
-    setLoading(true)
-    // Open the tab synchronously so popup blockers honor the click, then
-    // point it at the intent once the card is ready server-side.
-    const tab = window.open('', '_blank')
+  async function post() {
+    setState('posting')
     try {
-      const res = await fetch(`${API_URL}/api/share`, {
+      const res = await fetch(`${API_URL}/api/post-share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId, shareEnabled: true }),
+        body: JSON.stringify({ scanId }),
       })
-      if (!res.ok) throw new Error('share failed')
+      if (res.status === 403) {
+        // Stored token predates the write scope: re-run the OAuth popup.
+        setState('reauth')
+        return
+      }
+      if (!res.ok) throw new Error('post failed')
       const j = await res.json()
-      const intent = `https://x.com/intent/tweet?url=${encodeURIComponent(j.shareUrl)}&text=${encodeURIComponent(`apparently my X archetype is ${archetype}`)}`
-      if (tab) tab.location.href = intent
-      else window.location.href = intent
+      setTweetUrl(j.tweetUrl)
+      setState('done')
+      window.open(j.tweetUrl, '_blank')
     } catch {
-      tab?.close()
-      alert('Could not prepare the share. Try again.')
-    } finally {
-      setLoading(false)
+      alert('Could not post to X. Try again.')
+      setState('idle')
     }
   }
 
+  function reconnect() {
+    const apiOrigin = new URL(API_URL, window.location.origin).origin
+    const popup = window.open(
+      `${API_URL}/api/auth/x/start`,
+      'foryouplaybook-auth',
+      'popup=yes,width=600,height=740'
+    )
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== apiOrigin) return
+      const data = e.data as { type?: string; scanId?: string }
+      if (data?.type !== 'foryouplaybook:auth') return
+      window.removeEventListener('message', onMessage)
+      popup?.close()
+      // Re-auth reuses the existing scan and refreshes tokens; post again.
+      if (data.scanId) post()
+      else setState('idle')
+    }
+    window.addEventListener('message', onMessage)
+  }
+
+  if (state === 'done' && tweetUrl) {
+    return (
+      <a className="boxlink" href={tweetUrl} target="_blank" rel="noreferrer">
+        Posted — view on X
+      </a>
+    )
+  }
+
+  if (state === 'reauth') {
+    return (
+      <button className="boxlink" onClick={reconnect}>
+        Allow posting on X to share
+      </button>
+    )
+  }
+
   return (
-    <button className="boxlink" onClick={shareToX} disabled={loading}>
-      {loading ? 'Preparing your card\u2026' : 'Share to X'}
+    <button className="boxlink" onClick={post} disabled={state === 'posting'}>
+      {state === 'posting'
+        ? 'Posting your scorecard\u2026'
+        : `Post my scorecard to X`}
     </button>
   )
 }
