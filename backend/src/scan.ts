@@ -49,21 +49,21 @@ async function persistPosts(scanId: string, userId: string, posts: Awaited<Retur
     const pm = p.public_metrics || {}
     const npm = p.non_public_metrics || {}
     const publicEngagement =
-      (pm.likes ?? 0) +
-      (pm.replies ?? 0) +
-      (pm.reposts ?? 0) +
-      (pm.quotes ?? 0) +
-      (pm.bookmarks ?? 0)
+      (pm.like_count ?? 0) +
+      (pm.reply_count ?? 0) +
+      (pm.retweet_count ?? 0) +
+      (pm.quote_count ?? 0) +
+      (pm.bookmark_count ?? 0)
     insertMetrics.run(
       randomUUID(),
       postDbId,
       now,
       pm.impression_count ?? npm.impressions ?? null,
-      pm.likes ?? npm.likes ?? 0,
-      pm.replies ?? npm.replies ?? 0,
-      pm.reposts ?? npm.retweets ?? npm.reposts ?? 0,
-      pm.quotes ?? npm.quotes ?? 0,
-      pm.bookmarks ?? npm.bookmarks ?? 0,
+      pm.like_count ?? 0,
+      pm.reply_count ?? 0,
+      pm.retweet_count ?? 0,
+      pm.quote_count ?? 0,
+      pm.bookmark_count ?? 0,
       npm.engagements ?? (publicEngagement || null),
       npm.profile_clicks ?? null,
       npm.url_clicks ?? null
