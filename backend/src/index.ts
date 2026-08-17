@@ -1,10 +1,16 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { config } from './config.js'
 import { db } from './db.js'
 import { auth } from './auth.js'
 import { scanBudget } from './budget.js'
+
+const cardsDir = join(dirname(fileURLToPath(import.meta.url)), '../../data/cards')
+if (!existsSync(cardsDir)) mkdirSync(cardsDir, { recursive: true })
 
 const app = new Hono()
 
@@ -130,7 +136,7 @@ app.get('/api/playbook/:scanId', (c) => {
 })
 
 app.post('/api/share', async (c) => {
-  const body = (await c.req.json()) as { scanId: string; shareEnabled: boolean }
+  const body = (await c.req.json()) as { scanId: string; shareEnabled: boolean; image: string }
   const scan = db.prepare('SELECT user_id FROM scans WHERE id = ?').get(body.scanId) as
     | { user_id: string }
     | undefined
@@ -143,7 +149,60 @@ app.post('/api/share', async (c) => {
     user.username,
     scan.user_id
   )
-  return c.json({ publicUrl: `${config.frontendUrl}/?p=${user.username}` })
+  if (body.image) {
+    const base64 = body.image.replace(/^data:image\/png;base64,/, '')
+    const buf = Buffer.from(base64, 'base64')
+    writeFileSync(join(cardsDir, `${user.username}.png`), buf)
+  }
+  const origin = new URL(c.req.url).origin
+  const shareUrl = `${origin}/c/${user.username}`
+  const imageUrl = `${origin}/card/${user.username}.png`
+  const publicUrl = `${config.frontendUrl}/?p=${user.username}`
+  return c.json({ shareUrl, imageUrl, publicUrl })
+})
+
+app.get('/card/:username.png', async (c) => {
+  const username = c.req.param('username')
+  const file = join(cardsDir, `${username}.png`)
+  if (!existsSync(file)) return c.json({ error: 'not found' }, 404)
+  const buf = readFileSync(file)
+  c.header('Content-Type', 'image/png')
+  c.header('Cache-Control', 'public, max-age=3600')
+  return c.body(buf)
+})
+
+app.get('/c/:username', async (c) => {
+  const username = c.req.param('username')
+  const user = db
+    .prepare('SELECT username, display_name FROM users WHERE username = ? AND share_enabled = 1')
+    .get(username) as { username: string; display_name: string } | undefined
+  if (!user) return c.text('not found', 404)
+  const origin = new URL(c.req.url).origin
+  const imageUrl = `${origin}/card/${username}.png`
+  const publicUrl = `${config.frontendUrl}/?p=${username}`
+  const displayName = user.display_name || user.username
+  const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="ForYou Playbook for @${username}">
+<meta property="og:description" content="See how the X For You algorithm works for ${displayName}.">
+<meta property="og:image" content="${imageUrl}">
+<meta property="og:url" content="${publicUrl}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ForYou Playbook for @${username}">
+<meta name="twitter:description" content="See how the X For You algorithm works for ${displayName}.">
+<meta name="twitter:image" content="${imageUrl}">
+<title>ForYou Playbook for @${username}</title>
+<script>window.location.replace("${publicUrl}")</script>
+</head>
+<body>
+<p>ForYou Playbook for @${username}</p>
+<p><a href="${publicUrl}">Open scorecard</a></p>
+</body>
+</html>`
+  return c.html(html)
 })
 
 app.post('/api/settings/delete', async (c) => {

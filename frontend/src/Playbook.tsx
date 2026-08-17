@@ -331,10 +331,10 @@ export function Playbook({ scanId }: { scanId: string }) {
 
           <div className="card-stub">
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <DownloadImageButton cardRef={cardRef} archetype={data.scan.archetype} />
               <ShareSection
                 scanId={data.scan.id}
                 archetype={data.scan.archetype}
+                cardRef={cardRef}
               />
               <DeleteSection scanId={data.scan.id} />
             </div>
@@ -556,58 +556,33 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
-function DownloadImageButton({
-  cardRef,
-  archetype,
-}: {
-  cardRef: React.RefObject<HTMLDivElement | null>
-  archetype: string
-}) {
-  const [loading, setLoading] = useState(false)
-
-  async function download() {
-    if (!cardRef.current) return
-    setLoading(true)
-    try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
-      const link = document.createElement('a')
-      link.download = `foryouplaybook-${archetype.replace(/\s+/g, '-').toLowerCase()}.png`
-      link.href = dataUrl
-      link.click()
-    } catch {
-      alert('Could not generate scorecard image.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <button className="boxlink" onClick={download} disabled={loading}>
-      {loading ? 'Creating image…' : 'Download scorecard image'}
-    </button>
-  )
-}
-
 function ShareSection({
   scanId,
   archetype,
+  cardRef,
 }: {
   scanId: string
   archetype: string
+  cardRef: React.RefObject<HTMLDivElement | null>
 }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function share() {
+    if (!cardRef.current) return
     setLoading(true)
     try {
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 })
       const res = await fetch(`${API_URL}/api/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId, shareEnabled: true }),
+        body: JSON.stringify({ scanId, shareEnabled: true, image: dataUrl }),
       })
+      if (!res.ok) throw new Error('share failed')
       const j = await res.json()
-      setShareUrl(j.publicUrl)
+      setShareUrl(j.shareUrl)
+    } catch {
+      alert('Could not generate scorecard image.')
     } finally {
       setLoading(false)
     }
@@ -639,7 +614,7 @@ function ShareSection({
 
   return (
     <button className="boxlink" onClick={share} disabled={loading}>
-      {loading ? 'Sharing...' : 'Share my scorecard'}
+      {loading ? 'Creating image…' : 'Share my scorecard'}
     </button>
   )
 }
