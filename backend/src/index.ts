@@ -195,6 +195,18 @@ app.get('/card/:file', async (c) => {
   return c.body(buf)
 })
 
+// Read width/height from a PNG's IHDR chunk so the card page can declare
+// og:image dimensions (X renders large cards more reliably with them).
+function pngSize(file: string): { width: number; height: number } | null {
+  try {
+    const buf = readFileSync(file)
+    if (buf.length < 24 || buf.toString('ascii', 12, 16) !== 'IHDR') return null
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+  } catch {
+    return null
+  }
+}
+
 app.get('/c/:username', async (c) => {
   const username = c.req.param('username')
   const user = db
@@ -203,22 +215,32 @@ app.get('/c/:username', async (c) => {
   if (!user) return c.text('not found', 404)
   const imageUrl = `${config.frontendUrl}/card/${username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${username}`
+  // Canonical must be THIS page: scrapers that follow og:url would otherwise
+  // re-scrape the SPA, which has no card tags.
+  const selfUrl = `${config.frontendUrl}/c/${username}`
+  const dims = pngSize(join(cardsDir, `${username}.png`))
   const displayName = user.display_name || user.username
   const html = `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ForYou Playbook">
 <meta property="og:title" content="ForYou Playbook for @${username}">
 <meta property="og:description" content="See how the X For You algorithm works for ${displayName}.">
 <meta property="og:image" content="${imageUrl}">
-<meta property="og:url" content="${publicUrl}">
+<meta property="og:image:type" content="image/png">
+${dims ? `<meta property="og:image:width" content="${dims.width}">\n<meta property="og:image:height" content="${dims.height}">` : ''}
+<meta property="og:url" content="${selfUrl}">
+<link rel="canonical" href="${selfUrl}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="ForYou Playbook for @${username}">
 <meta name="twitter:description" content="See how the X For You algorithm works for ${displayName}.">
 <meta name="twitter:image" content="${imageUrl}">
+<meta name="twitter:image:alt" content="@${username}'s ForYou scorecard with letter grades">
 <title>ForYou Playbook for @${username}</title>
-<script>window.location.replace("${publicUrl}")</script>
+<script>window.location.replace(${JSON.stringify(publicUrl)})</script>
 </head>
 <body>
 <p>ForYou Playbook for @${username}</p>
