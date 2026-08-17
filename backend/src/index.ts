@@ -15,6 +15,14 @@ if (!existsSync(cardsDir)) mkdirSync(cardsDir, { recursive: true })
 
 const app = new Hono()
 
+// Behind Railway's proxy TLS terminates at the edge, so c.req.url says http;
+// trust x-forwarded-proto so share/OG links don't point at http://.
+function requestOrigin(c: { req: { url: string; header: (name: string) => string | undefined } }): string {
+  const url = new URL(c.req.url)
+  const proto = c.req.header('x-forwarded-proto')?.split(',')[0].trim() || url.protocol.replace(':', '')
+  return `${proto}://${url.host}`
+}
+
 app.use(
   '*',
   cors({
@@ -172,16 +180,19 @@ app.post('/api/share', async (c) => {
     const buf = Buffer.from(base64, 'base64')
     writeFileSync(join(cardsDir, `${user.username}.png`), buf)
   }
-  const origin = new URL(c.req.url).origin
+  const origin = requestOrigin(c)
   const shareUrl = `${origin}/c/${user.username}`
   const imageUrl = `${origin}/card/${user.username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${user.username}`
   return c.json({ shareUrl, imageUrl, publicUrl })
 })
 
-app.get('/card/:username.png', async (c) => {
-  const username = c.req.param('username')
-  const file = join(cardsDir, `${username}.png`)
+// Hono treats ":username.png" as a param literally named "username.png",
+// so match the whole filename and validate it (also blocks path traversal).
+app.get('/card/:file', async (c) => {
+  const fileName = c.req.param('file')
+  if (!/^[A-Za-z0-9_]{1,30}\.png$/.test(fileName)) return c.json({ error: 'not found' }, 404)
+  const file = join(cardsDir, fileName)
   if (!existsSync(file)) return c.json({ error: 'not found' }, 404)
   const buf = readFileSync(file)
   c.header('Content-Type', 'image/png')
@@ -195,7 +206,7 @@ app.get('/c/:username', async (c) => {
     .prepare('SELECT username, display_name FROM users WHERE username = ? AND share_enabled = 1')
     .get(username) as { username: string; display_name: string } | undefined
   if (!user) return c.text('not found', 404)
-  const origin = new URL(c.req.url).origin
+  const origin = requestOrigin(c)
   const imageUrl = `${origin}/card/${username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${username}`
   const displayName = user.display_name || user.username
