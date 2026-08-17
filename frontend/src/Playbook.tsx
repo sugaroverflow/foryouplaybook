@@ -321,8 +321,8 @@ export function Playbook({ scanId }: { scanId: string }) {
                   <a href="https://insidetheforyou.com" target="_blank" rel="noreferrer">
                     Nader's Inside the For You
                   </a>{' '}
-                  — drag the knobs to re-rank your top 5 posts. No predicted probabilities here,
-                  just your real counts multiplied by the weights.
+                  — drag the knobs to re-rank your top 5 posts. Each post starts with a small
+                  baseline, then your real counts are multiplied by the weight.
                 </p>
                 <PostPlayground posts={data.posts} author={data.author} />
               </>
@@ -381,7 +381,9 @@ function computeScore(post: Post, weights: Record<string, number>): number {
     if (!a.metric) return sum
     const scale = a.metricScale ?? 1
     const raw = (post[a.metric] as number | null) ?? 0
-    return sum + raw * scale * (weights[a.id] ?? a.weight)
+    // Add a small baseline so every post responds to every knob, even when the count is zero.
+    const count = raw * scale + 0.1
+    return sum + count * (weights[a.id] ?? a.weight)
   }, 0)
 }
 
