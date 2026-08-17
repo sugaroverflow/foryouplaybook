@@ -146,7 +146,7 @@ app.get('/api/playbook/user/:username', (c) => {
     | undefined
   if (!user) return c.json({ error: 'not found' }, 404)
   const scan = db
-    .prepare('SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .prepare('SELECT * FROM scans WHERE user_id = ? ORDER BY started_at DESC LIMIT 1')
     .get(user.id) as { id: string; user_id: string } | undefined
   if (!scan) return c.json({ error: 'not found' }, 404)
   return c.json(buildPlaybookResponse(scan))
