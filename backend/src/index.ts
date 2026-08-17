@@ -15,14 +15,6 @@ if (!existsSync(cardsDir)) mkdirSync(cardsDir, { recursive: true })
 
 const app = new Hono()
 
-// Behind Railway's proxy TLS terminates at the edge, so c.req.url says http;
-// trust x-forwarded-proto so share/OG links don't point at http://.
-function requestOrigin(c: { req: { url: string; header: (name: string) => string | undefined } }): string {
-  const url = new URL(c.req.url)
-  const proto = c.req.header('x-forwarded-proto')?.split(',')[0].trim() || url.protocol.replace(':', '')
-  return `${proto}://${url.host}`
-}
-
 app.use(
   '*',
   cors({
@@ -180,9 +172,10 @@ app.post('/api/share', async (c) => {
     const buf = Buffer.from(base64, 'base64')
     writeFileSync(join(cardsDir, `${user.username}.png`), buf)
   }
-  const origin = requestOrigin(c)
-  const shareUrl = `${origin}/c/${user.username}`
-  const imageUrl = `${origin}/card/${user.username}.png`
+  // The frontend domain proxies /c/* and /card/* back here (Vercel rewrites,
+  // Vite dev proxy), so shared links carry the real domain, not Railway's.
+  const shareUrl = `${config.frontendUrl}/c/${user.username}`
+  const imageUrl = `${config.frontendUrl}/card/${user.username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${user.username}`
   return c.json({ shareUrl, imageUrl, publicUrl })
 })
@@ -206,8 +199,7 @@ app.get('/c/:username', async (c) => {
     .prepare('SELECT username, display_name FROM users WHERE username = ? AND share_enabled = 1')
     .get(username) as { username: string; display_name: string } | undefined
   if (!user) return c.text('not found', 404)
-  const origin = requestOrigin(c)
-  const imageUrl = `${origin}/card/${username}.png`
+  const imageUrl = `${config.frontendUrl}/card/${username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${username}`
   const displayName = user.display_name || user.username
   const html = `<!doctype html>

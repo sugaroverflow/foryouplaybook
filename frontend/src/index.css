@@ -1405,6 +1405,22 @@ a {
   margin-bottom: 18px;
 }
 
+/* Share capture region: layout-neutral padding (offset by negative margin)
+   so the exported PNG gets white breathing room without moving anything */
+.share-capture {
+  background: var(--white);
+  padding: 28px;
+  margin: -28px;
+  border-radius: 16px;
+}
+
+@media (max-width: 760px) {
+  .share-capture {
+    padding: 12px;
+    margin: -12px;
+  }
+}
+
 /* Identity strip: photo + handle as one unit, grade stamped on the far corner */
 .card-identity-row {
   display: flex;

@@ -149,6 +149,9 @@ export function Playbook({
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('review')
   const cardRef = useRef<HTMLDivElement>(null)
+  // X card images cap at 4096px a side and read best near 2:1 — capture just
+  // the header + grade rail, not the whole (very tall) card.
+  const shareRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const url = scanId
@@ -207,6 +210,7 @@ export function Playbook({
     <Section id="top" theme="dark" eyebrow="Your ForYou scorecard">
       <Reveal>
         <div className="score-card playbook-card" ref={cardRef}>
+          <div className="share-capture" ref={shareRef}>
           <div className="card-identity-row">
             {data.author && <CardAvatar author={data.author} size={96} />}
             <div className="card-identity-text">
@@ -236,6 +240,7 @@ export function Playbook({
           <hr className="card-rule" />
 
           <GradeRail fit={fit} />
+          </div>
 
           <hr className="card-rule" />
 
@@ -349,7 +354,7 @@ export function Playbook({
               <ShareSection
                 scanId={data.scan.id}
                 archetype={data.scan.archetype}
-                cardRef={cardRef}
+                captureRef={shareRef}
               />
               <DeleteSection scanId={data.scan.id} />
             </div>
@@ -578,23 +583,27 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
 function ShareSection({
   scanId,
   archetype,
-  cardRef,
+  captureRef,
 }: {
   scanId: string
   archetype: string
-  cardRef: React.RefObject<HTMLDivElement | null>
+  captureRef: React.RefObject<HTMLDivElement | null>
 }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function share() {
-    if (!cardRef.current) return
+    if (!captureRef.current) return
     setLoading(true)
     try {
-      const dataUrl = await toPng(cardRef.current, {
+      const dataUrl = await toPng(captureRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        filter: (node) => !(node instanceof HTMLImageElement),
+        backgroundColor: '#ffffff',
+        // If an image can't be fetched (e.g. CORS), degrade to a blank pixel
+        // instead of failing the whole capture.
+        imagePlaceholder:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       })
       const res = await fetch(`${API_URL}/api/share`, {
         method: 'POST',

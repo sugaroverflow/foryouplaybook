@@ -2,5 +2,15 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/c/:username",
+      "destination": "https://foryouplaybook-production.up.railway.app/c/:username"
+    },
+    {
+      "source": "/card/:file",
+      "destination": "https://foryouplaybook-production.up.railway.app/card/:file"
+    }
+  ]
 }
