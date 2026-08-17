@@ -174,7 +174,9 @@ app.post('/api/share', async (c) => {
   }
   // The frontend domain proxies /c/* and /card/* back here (Vercel rewrites,
   // Vite dev proxy), so shared links carry the real domain, not Railway's.
-  const shareUrl = `${config.frontendUrl}/c/${user.username}`
+  // The ?v= makes each share a fresh URL to X's card scraper — otherwise a
+  // scrape cached while the card was missing sticks for days.
+  const shareUrl = `${config.frontendUrl}/c/${user.username}?v=${Date.now()}`
   const imageUrl = `${config.frontendUrl}/card/${user.username}.png`
   const publicUrl = `${config.frontendUrl}/?p=${user.username}`
   return c.json({ shareUrl, imageUrl, publicUrl })

@@ -590,6 +590,8 @@ function ShareSection({
   captureRef: React.RefObject<HTMLDivElement | null>
 }) {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
+  const [imageCopied, setImageCopied] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function share() {
@@ -612,11 +614,29 @@ function ShareSection({
       })
       if (!res.ok) throw new Error('share failed')
       const j = await res.json()
+      setImageDataUrl(dataUrl)
       setShareUrl(j.shareUrl)
     } catch {
       alert('Could not generate scorecard image.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function copyImage() {
+    if (!imageDataUrl) return
+    try {
+      const blob = await (await fetch(imageDataUrl)).blob()
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      setImageCopied(true)
+      setTimeout(() => setImageCopied(false), 2500)
+    } catch {
+      // Clipboard images not available (e.g. permissions): download instead
+      // so the card can still be attached to the tweet by hand.
+      const a = document.createElement('a')
+      a.href = imageDataUrl
+      a.download = 'foryou-scorecard.png'
+      a.click()
     }
   }
 
@@ -631,6 +651,9 @@ function ShareSection({
         >
           Share to X
         </a>
+        <button className="boxlink" onClick={copyImage}>
+          {imageCopied ? 'Copied — paste it in your tweet' : 'Copy card image'}
+        </button>
         <button
           className="boxlink"
           onClick={() => {
