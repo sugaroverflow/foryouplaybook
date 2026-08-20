@@ -589,11 +589,6 @@ function ShareSection({ scanId, archetype }: { scanId: string; archetype: string
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
   async function openShare() {
-    const popup = window.open(
-      'about:blank',
-      'foryouplaybook-share',
-      'popup=yes,width=600,height=500'
-    )
     setState('loading')
     try {
       const res = await fetch(`${API_URL}/api/share`, {
@@ -605,10 +600,8 @@ function ShareSection({ scanId, archetype }: { scanId: string; archetype: string
       const j = await res.json()
       setShareUrl(j.shareUrl)
       setImageUrl(j.imageUrl)
-      if (popup) popup.location.href = xIntentUrl(shareText(archetype), j.shareUrl)
       setState('ready')
     } catch {
-      popup?.close()
       alert('Could not prepare your card. Try again.')
       setState('idle')
     }
