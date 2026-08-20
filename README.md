@@ -80,7 +80,7 @@ See [DEPLOY.md](./DEPLOY.md) for the full checklist. The short version:
 
 ## Important notes
 
-- X scopes: `tweet.read users.read tweet.write media.write offline.access`. Reads are the product; the only write the app ever makes is your scorecard post, and only when you review it in the composer and tap "Post to X". It never likes, follows, DMs, or acts on its own.
+- X scopes: `tweet.read users.read offline.access`. The app only reads your posts and profile. Sharing is done via a generated card image and X Web Intent — the app never posts, likes, follows, DMs, or acts on your behalf.
 - SQLite is ephemeral on Railway unless you add a volume at `/app/data`.
 - The X API has monthly read limits. `MAX_POSTS` and `MONTHLY_SCAN_BUDGET` protect against quota overruns.
 - Grok is used for all copy, but the recommendations are grounded in the open-source X ranking weights and the user's own posts.

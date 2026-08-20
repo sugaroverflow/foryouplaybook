@@ -67,9 +67,9 @@ auth.get('/start', (c) => {
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('client_id', config.xClientId)
   url.searchParams.set('redirect_uri', config.xRedirectUri)
-  // tweet.write + media.write let "Post to X" attach the scorecard image;
-  // the app only ever posts when the user taps the button.
-  url.searchParams.set('scope', 'tweet.read users.read tweet.write media.write offline.access')
+  // Read-only scopes: the app never posts on the user's behalf.
+  // Sharing is done via X Web Intent and a generated card image.
+  url.searchParams.set('scope', 'tweet.read users.read offline.access')
   url.searchParams.set('state', state)
   url.searchParams.set('code_challenge', codeChallenge)
   url.searchParams.set('code_challenge_method', 'S256')

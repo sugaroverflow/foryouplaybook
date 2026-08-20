@@ -8,7 +8,6 @@ import { db } from './db.js'
 import { auth } from './auth.js'
 import { scanBudget } from './budget.js'
 import { generateCardPng } from './card.js'
-import { isReauthorize, postScorecard } from './post.js'
 
 // Keep card images next to the sqlite file so they live on the persistent
 // volume in production (/app/data) instead of the ephemeral container fs.
@@ -164,7 +163,6 @@ async function prepareShare(scanId: string): Promise<{
   shareUrl: string
   imageUrl: string
   publicUrl: string
-  png: Buffer | null
 } | null> {
   const scan = db
     .prepare('SELECT user_id, archetype, archetype_confidence, post_count, fit_json FROM scans WHERE id = ?')
@@ -213,7 +211,6 @@ async function prepareShare(scanId: string): Promise<{
     shareUrl: `${config.frontendUrl}/s/${user.username}?v=${Date.now().toString(36)}`,
     imageUrl: `${config.frontendUrl}/card/${user.username}.png`,
     publicUrl: `${config.frontendUrl}/?p=${user.username}`,
-  png,
   }
 }
 
@@ -223,32 +220,6 @@ app.post('/api/share', async (c) => {
   if (!share) return c.json({ error: 'not found' }, 404)
   const { shareUrl, imageUrl, publicUrl } = share
   return c.json({ shareUrl, imageUrl, publicUrl })
-})
-
-// Post the tweet on the user's behalf with the card attached as real media —
-// X suppresses link-preview cards for young domains, so a preview can't be
-// relied on. Requires the tweet.write/media.write scopes.
-app.post('/api/post-share', async (c) => {
-  const body = (await c.req.json()) as { scanId: string; text?: string }
-  const share = await prepareShare(body.scanId)
-  if (!share) return c.json({ error: 'not found' }, 404)
-  if (!share.png) return c.json({ error: 'card generation failed' }, 500)
-  // The user stages and edits the text in the app before posting.
-  const text =
-    typeof body.text === 'string' && body.text.trim()
-      ? body.text.trim().slice(0, 1000)
-      : `apparently my X archetype is ${share.archetype}\n\n${share.shareUrl}`
-  try {
-    const { tweetId } = await postScorecard(share.userId, text, share.png)
-    return c.json({
-      tweetUrl: `https://x.com/${share.username}/status/${tweetId}`,
-      shareUrl: share.shareUrl,
-    })
-  } catch (e) {
-    if (isReauthorize(e)) return c.json({ error: 'reauthorize' }, 403)
-    console.error('post-share failed', e)
-    return c.json({ error: 'post failed' }, 502)
-  }
 })
 
 // Hono treats ":username.png" as a param literally named "username.png",

@@ -564,23 +564,36 @@ function MoveRow({ move, author }: { move: Move; author: Author | null }) {
   )
 }
 
-// X weights every URL as 23 characters regardless of length.
-function tweetLength(text: string): number {
-  return text.replace(/https?:\/\/\S+/g, 'x'.repeat(23)).length
+function shareText(archetype: string): string {
+  return `apparently my X archetype is ${archetype}\n\n`
+}
+
+function xIntentUrl(text: string, shareUrl: string): string {
+  return `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`
+}
+
+async function copyImage(imageUrl: string) {
+  try {
+    const res = await fetch(imageUrl)
+    const blob = await res.blob()
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+    alert('Image copied')
+  } catch {
+    alert('Could not copy image')
+  }
 }
 
 function ShareSection({ scanId, archetype }: { scanId: string; archetype: string }) {
-  const [state, setState] = useState<
-    'idle' | 'loading' | 'composing' | 'posting' | 'reauth' | 'done'
-  >('idle')
-  const [text, setText] = useState('')
+  const [state, setState] = useState<'idle' | 'loading' | 'ready'>('idle')
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
-  const [tweetUrl, setTweetUrl] = useState<string | null>(null)
 
-  const chars = tweetLength(text)
-  const overLimit = chars > 280
-
-  async function openComposer() {
+  async function openShare() {
+    const popup = window.open(
+      'about:blank',
+      'foryouplaybook-share',
+      'popup=yes,width=600,height=500'
+    )
     setState('loading')
     try {
       const res = await fetch(`${API_URL}/api/share`, {
@@ -590,104 +603,49 @@ function ShareSection({ scanId, archetype }: { scanId: string; archetype: string
       })
       if (!res.ok) throw new Error('share failed')
       const j = await res.json()
+      setShareUrl(j.shareUrl)
       setImageUrl(j.imageUrl)
-      setText(`apparently my X archetype is ${archetype}\n\n${j.shareUrl}`)
-      setState('composing')
+      if (popup) popup.location.href = xIntentUrl(shareText(archetype), j.shareUrl)
+      setState('ready')
     } catch {
+      popup?.close()
       alert('Could not prepare your card. Try again.')
       setState('idle')
     }
   }
 
-  async function post() {
-    setState('posting')
-    try {
-      const res = await fetch(`${API_URL}/api/post-share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId, text }),
-      })
-      if (res.status === 403) {
-        // Stored token predates the write scope: re-run the OAuth popup.
-        setState('reauth')
-        return
-      }
-      if (!res.ok) throw new Error('post failed')
-      const j = await res.json()
-      setTweetUrl(j.tweetUrl)
-      setState('done')
-    } catch {
-      alert('Could not post to X. Try again.')
-      setState('composing')
-    }
-  }
-
-  function reconnect() {
-    const apiOrigin = new URL(API_URL, window.location.origin).origin
-    const popup = window.open(
-      `${API_URL}/api/auth/x/start`,
-      'foryouplaybook-auth',
-      'popup=yes,width=600,height=740'
-    )
-    function onMessage(e: MessageEvent) {
-      if (e.origin !== apiOrigin) return
-      const data = e.data as { type?: string; scanId?: string }
-      if (data?.type !== 'foryouplaybook:auth') return
-      window.removeEventListener('message', onMessage)
-      popup?.close()
-      // Re-auth reuses the existing scan and refreshes tokens; post again.
-      if (data.scanId) post()
-      else setState('composing')
-    }
-    window.addEventListener('message', onMessage)
-  }
-
-  if (state === 'done' && tweetUrl) {
+  if (state === 'ready' && shareUrl) {
     return (
-      <a className="boxlink" href={tweetUrl} target="_blank" rel="noreferrer">
-        Posted — view on X
-      </a>
-    )
-  }
-
-  if (state === 'reauth') {
-    return (
-      <button className="boxlink" onClick={reconnect}>
-        Allow posting on X to share
-      </button>
-    )
-  }
-
-  if (state === 'composing' || state === 'posting') {
-    return (
-      <div className="compose-box">
+      <div className="compose-box" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <span className="tag" style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--muted-on-light)' }}>
-          Your post — edit before it goes out
+          Your scorecard is ready
         </span>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
-          disabled={state === 'posting'}
-        />
         {imageUrl && <img className="compose-img" src={imageUrl} alt="Your scorecard card" />}
-        <div className="compose-meta">
-          <span className={`compose-count ${overLimit ? 'over' : ''}`}>{chars}/280</span>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="boxlink" onClick={() => setState('idle')} disabled={state === 'posting'}>
-              Cancel
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a className="boxlink" href={xIntentUrl(shareText(archetype), shareUrl)} target="_blank" rel="noreferrer">
+            Share to X
+          </a>
+          <button
+            className="boxlink"
+            onClick={() => {
+              navigator.clipboard.writeText(shareUrl)
+              alert('Link copied')
+            }}
+          >
+            Copy link
+          </button>
+          {imageUrl && (
+            <button className="boxlink" onClick={() => copyImage(imageUrl)}>
+              Copy image
             </button>
-            <button className="boxlink" onClick={post} disabled={state === 'posting' || overLimit || !text.trim()}>
-              {state === 'posting' ? 'Posting\u2026' : 'Post to X'}
-            </button>
-          </div>
+          )}
         </div>
       </div>
     )
   }
 
   return (
-    <button className="boxlink" onClick={openComposer} disabled={state === 'loading'}>
+    <button className="boxlink" onClick={openShare} disabled={state === 'loading'}>
       {state === 'loading' ? 'Preparing your card\u2026' : 'Share my scorecard'}
     </button>
   )
