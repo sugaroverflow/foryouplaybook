@@ -85,32 +85,26 @@ const CONF_COLOR: Record<string, string> = {
 // Engagement multipliers from the open-source X heavy-ranker snapshot —
 // the same numbers Nader's weight bars visualize.
 const RULEBOOK_WEIGHTS = [
-  { label: 'You reply to a reply', value: 75 },
-  { label: 'Reply', value: 13.5 },
-  { label: 'Profile click', value: 12 },
-  { label: 'Repost', value: 1 },
-  { label: 'Like', value: 0.5 },
-  { label: 'Report', value: -369 },
+  { label: 'You reply to a reply', value: 75, phrase: 'Replying to a reply is worth' },
+  { label: 'Reply', value: 13.5, phrase: 'A direct reply is worth' },
+  { label: 'Profile click', value: 12, phrase: 'A profile click is worth' },
+  { label: 'Repost', value: 1, phrase: 'A repost is worth' },
+  { label: 'Like', value: 0.5, phrase: 'A like is worth' },
+  { label: 'Report', value: -369, phrase: 'A report is worth' },
 ]
 
 function Rulebook() {
   return (
     <div className="rulebook">
-      <span className="tag">The rulebook · what one action is worth to the ranker</span>
+      <span className="tag">Reference: Here's how X scores posts (rulebook, not personalized)</span>
       {RULEBOOK_WEIGHTS.map((w) => (
-        <div className="rulebook-row" key={w.label}>
-          <span>{w.label}</span>
-          <div className="rulebook-bar">
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: `${Math.min(100, (Math.abs(w.value) / 75) * 100)}%` }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              style={{ height: '100%', background: w.value >= 0 ? '#3ecf70' : '#e5484d' }}
-            />
-          </div>
-          <span className="rulebook-value">{w.value}×</span>
-        </div>
+        <p className="rulebook-sentence" key={w.label}>
+          {w.phrase}{' '}
+          <span className={w.value >= 0 ? 'rulebook-pos' : 'rulebook-neg'}>
+            {w.value}×
+          </span>
+          .
+        </p>
       ))}
     </div>
   )

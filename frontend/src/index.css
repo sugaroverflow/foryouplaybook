@@ -1632,33 +1632,19 @@ a {
   margin-bottom: 12px;
 }
 
-.rulebook-row {
-  display: grid;
-  grid-template-columns: 150px 1fr 56px;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 0;
-  font-family: var(--mono);
-  font-size: 12px;
+.rulebook-sentence {
+  margin: 8px 0 0;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-@media (max-width: 560px) {
-  .rulebook-row {
-    grid-template-columns: 110px 1fr 52px;
-    gap: 8px;
-    font-size: 11px;
-  }
+.rulebook-pos {
+  color: #3ecf70;
 }
 
-.rulebook-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-}
-
-.rulebook-value {
-  text-align: right;
+.rulebook-neg {
+  color: #e5484d;
 }
 
 .rewrite-note {
